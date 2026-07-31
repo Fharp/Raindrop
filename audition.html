@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>降水渲染谱 · 试听台</title>
+<style>
+:root{
+  --ground:#0B1219; --panel:#131E27; --panel2:#0F1A22;
+  --rule:#22323E; --rule2:#2E4352;
+  --dim:#61798A; --body:#9DB2C0; --chalk:#E4EDF3;
+  --cold:#3E6F8E; --bright:#6FD3E8; --amber:#F0B34A;
+  --mono:ui-monospace,"Cascadia Mono","JetBrains Mono","SF Mono",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--ground); color:var(--body);
+  font:12px/1.55 var(--mono); letter-spacing:.01em;
+  display:flex; flex-direction:column;
+}
+button,select,input{font:inherit;color:inherit}
+button{
+  background:var(--panel); border:1px solid var(--rule2); color:var(--chalk);
+  padding:5px 12px; cursor:pointer; border-radius:2px;
+}
+button:hover:not(:disabled){border-color:var(--bright);color:var(--bright)}
+button:disabled{opacity:.35;cursor:default}
+button:focus-visible,select:focus-visible{outline:2px solid var(--bright);outline-offset:1px}
+select{background:var(--panel);border:1px solid var(--rule2);padding:4px 6px;border-radius:2px}
+
+header{
+  padding:12px 18px; border-bottom:1px solid var(--rule);
+  display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
+}
+h1{
+  margin:0; font-size:13px; font-weight:600; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--chalk);
+}
+.sub{color:var(--dim);font-size:11px}
+.spacer{flex:1}
+
+#setup{padding:40px 18px;max-width:760px}
+#setup h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--chalk);margin:0 0 14px}
+#setup ol{margin:0 0 20px;padding-left:20px;color:var(--dim)}
+#setup li{margin-bottom:6px}
+#setup code{color:var(--body);background:var(--panel);padding:1px 5px;border-radius:2px}
+#status{margin-top:14px;color:var(--dim);min-height:1.6em}
+#status.err{color:var(--amber)}
+
+main{flex:1;display:none;flex-direction:column;min-height:0}
+.bar{
+  padding:8px 18px; border-bottom:1px solid var(--rule);
+  display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+}
+label.f{color:var(--dim);letter-spacing:.08em;text-transform:uppercase;font-size:10px}
+
+/* ── 信号带：整场雨的形状 ───────────────────────────── */
+#strip{
+  position:relative; border-bottom:1px solid var(--rule);
+  background:var(--panel2); cursor:crosshair;
+}
+#strip canvas{display:block;width:100%;height:154px}
+#hover{
+  position:absolute; top:6px; padding:3px 7px; pointer-events:none;
+  background:#0B1219ee; border:1px solid var(--rule2); color:var(--chalk);
+  font-size:11px; white-space:nowrap; display:none; border-radius:2px;
+}
+
+#body{flex:1;display:grid;grid-template-columns:minmax(300px,1fr) minmax(280px,380px);min-height:0}
+@media(max-width:820px){#body{grid-template-columns:1fr}}
+section{padding:14px 18px;overflow:auto;min-height:0}
+section+section{border-left:1px solid var(--rule)}
+h3{
+  margin:0 0 12px; font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--dim); font-weight:600;
+}
+
+/* ── 电平表 ─────────────────────────────────────────── */
+.stem{display:grid;grid-template-columns:112px 1fr 46px;gap:9px;align-items:center;margin-bottom:7px}
+.stem .n{color:var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stem .n.off{color:#3B4C58}
+.meter{height:9px;background:#0A1016;border:1px solid var(--rule);position:relative;overflow:hidden}
+.meter i{position:absolute;inset:0 auto 0 0;width:0;background:var(--cold);transition:width .12s linear}
+.stem.hot .meter i{background:var(--bright)}
+.stem .v{text-align:right;color:var(--dim);font-variant-numeric:tabular-nums}
+.stem.hot .v{color:var(--chalk)}
+
+/* ── 数据读出 ───────────────────────────────────────── */
+table{width:100%;border-collapse:collapse}
+td{padding:3px 0;vertical-align:baseline}
+td.k{color:var(--dim);width:44%;white-space:nowrap}
+td.v{color:var(--chalk);font-variant-numeric:tabular-nums}
+.big{font-size:26px;line-height:1.15;color:var(--chalk);font-variant-numeric:tabular-nums}
+.big small{font-size:11px;color:var(--dim);letter-spacing:.08em}
+.tag{
+  display:inline-block;padding:1px 7px;border:1px solid var(--rule2);
+  color:var(--dim);font-size:10px;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;
+}
+.tag.th{border-color:var(--amber);color:var(--amber)}
+hr{border:0;border-top:1px solid var(--rule);margin:14px 0}
+.note{color:var(--dim);font-size:11px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>降水渲染谱 · 试听台</h1>
+  <span class="sub" id="hdr">未载入</span>
+  <span class="sub" id="runerr" style="display:none;color:var(--amber)"></span>
+  <span class="spacer"></span>
+  <span class="sub">按 UTC 钟点对齐 · 1 数据小时 = 1 帧</span>
+</header>
+
+<div id="setup">
+  <h2>载入</h2>
+  <ol>
+    <li>选中 <code>F:\Raining</code>（要同时包含 <code>web_out\</code> 与 <code>sound\</code>）。</li>
+    <li>浏览器会问是否上传整个文件夹——选是。文件只在本机解码，不上传任何地方。</li>
+    <li>音频需要一次点击才能启动，这是浏览器的硬性规定。</li>
+  </ol>
+  <input type="file" id="pick" webkitdirectory directory multiple hidden>
+  <button id="pickBtn">选择文件夹</button>
+  <div id="status"></div>
+</div>
+
+<main>
+  <div class="bar">
+    <label class="f" for="citySel">城市</label>
+    <select id="citySel"></select>
+    <label class="f" for="evSel">场次</label>
+    <select id="evSel"></select>
+    <button id="rndBtn" title="按当前 UTC 钟点，在全部城市里随机抽一场，等同线上默认模式">按此刻钟点随机</button>
+    <span class="spacer"></span>
+    <label class="f" for="rate">1 小时 =</label>
+    <select id="rate">
+      <option value="3600">3600 秒（实时）</option>
+      <option value="120">120 秒</option>
+      <option value="30" selected>30 秒</option>
+      <option value="10">10 秒</option>
+    </select>
+    <label class="f" for="eqOn" title="关掉即为引擎原始输出">EQ</label>
+    <input type="checkbox" id="eqOn" checked>
+    <label class="f" for="indoor" title="模拟隔着窗户听雨，与气象数据无关">室内感</label>
+    <input type="range" id="indoor" min="0" max="100" value="0" style="width:80px">
+    <label class="f" for="vol">总音量</label>
+    <input type="range" id="vol" min="0" max="100" value="70" style="width:90px">
+    <button id="play" disabled>播放</button>
+  </div>
+
+  <div id="strip">
+    <canvas id="cv"></canvas>
+    <div id="hover"></div>
+  </div>
+
+  <div id="body">
+    <section>
+      <h3>分层电平</h3>
+      <div id="stems"></div>
+      <div class="note" id="thNote"></div>
+      <h3 style="margin-top:18px">均衡</h3>
+      <div class="note" id="eqRead" style="margin-top:0">EQ 未载入</div>
+      <div class="note" style="color:#4A5D6B">强度越大，低频越开、高频越收；宽带响度由补偿量抵消，不影响引擎标定。</div>
+    </section>
+    <section>
+      <h3>当前帧</h3>
+      <div class="big" id="bigLiq">—<small> mm/h</small></div>
+      <div style="margin:8px 0 14px"><span class="tag" id="tagI">—</span> <span class="tag" id="tagC">—</span> <span class="tag th" id="tagT" style="display:none">雷</span></div>
+      <table id="read"></table>
+    </section>
+  </div>
+</main>
+
+<script src="rain_eq.js"></script>
+<script>
+"use strict";
+
+// ───────────────────────────────── 状态
+
+const S = {
+  files: new Map(),        // 小写相对路径 -> File
+  manifest: null, roster: null, cityDoc: null, score: null,
+  buffers: new Map(),      // asset id -> AudioBuffer
+  assetById: new Map(),
+  ctx: null, master: null, stems: new Map(),
+  playing: false, pumpId: 0, t0: 0, cursor: 0, frame: -1, scheduledFrame: -1,
+  secPerFrame: 30, rafId: 0,
+};
+
+const LOOP_IDS = ["rain_light_steady","rain_light_gusty","rain_mid","rain_heavy","wind_breeze","wind_strong"];
+const TRIM = 0.05, XFADE = 0.5, MIN_RUN = 4, LOOKAHEAD = 3.0, PUMP_MS = 200;
+
+// 等功率淡化曲线。两段不相关的噪声按功率相加，必须满足 a²+b²=1 才不塌电平；
+// exponentialRamp 是 dB 线性，交叠中点会掉到 -37 dB，听起来就是雨突然断一下。
+const FADE_PTS = 129;
+const FADE_IN = new Float32Array(FADE_PTS), FADE_OUT = new Float32Array(FADE_PTS);
+for (let i = 0; i < FADE_PTS; i++) {
+  const x = i / (FADE_PTS - 1);
+  FADE_IN[i]  = Math.sin(x * Math.PI / 2);
+  FADE_OUT[i] = Math.cos(x * Math.PI / 2);
+}
+
+const $ = s => document.querySelector(s);
+const clamp = (x,a,b) => x<a?a:x>b?b:x;
+const say = (m, err) => { const el=$("#status"); el.textContent=m; el.className = err?"err":""; };
+// boot 之后 #setup 整块隐藏了，运行期的错误得另找地方显示
+let _warned = "";
+function warn(m){
+  if (m === _warned) return;
+  _warned = m;
+  const el = $("#runerr");
+  if (el) { el.textContent = m; el.style.display = "inline"; }
+  console.error(m);
+}
+
+// ───────────────────────────────── 载入
+
+$("#pickBtn").onclick = () => $("#pick").click();
+$("#pick").onchange = async e => {
+  const list = [...e.target.files];
+  if (!list.length) return;
+  S.files.clear();
+  for (const f of list) {
+    const p = (f.webkitRelativePath || f.name).split("/").slice(1).join("/");
+    S.files.set(p.toLowerCase(), f);
+  }
+  try { await boot(); } catch (err) { say(err.message, true); console.error(err); }
+};
+
+function grab(path) {
+  const f = S.files.get(path.toLowerCase());
+  if (!f) throw new Error("找不到 " + path + "。确认选的是同时含 web_out\\ 和 sound\\ 的那一层。");
+  return f;
+}
+const readJSON = async p => JSON.parse(await grab(p).text());
+
+async function boot() {
+  say("读取 web_out/manifest.json …");
+  S.manifest = await readJSON("web_out/manifest.json");
+  S.roster   = await readJSON("web_out/index/cities.json");
+  for (const a of S.manifest.assets) S.assetById.set(a.id, a);
+
+  say("解码 6 条循环素材 …");
+  S.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  S.master = S.ctx.createGain();
+  S.master.gain.value = 0.7 * 0.7;
+  S.master.connect(S.ctx.destination);
+
+  await setupEQ();
+
+  const root = S.manifest.audio_root || "sound/";
+  for (const id of LOOP_IDS) {
+    const a = S.assetById.get(id);
+    if (!a) continue;
+    await decode(id, root + a.file);
+    const g = S.ctx.createGain();
+    g.gain.value = 0;
+    g.connect(S.eq ? (a.kind === "wind" ? S.eq.windIn : S.eq.rainIn) : S.master);
+    S.stems.set(id, { gain: g, buffer: S.buffers.get(id), next: 0, lfo: null, lfoGain: null,
+                      regions: a.regions || null, usable: a.usable_ratio });
+  }
+
+  say("解码 12 条雷 …");
+  for (const a of S.manifest.assets) if (a.kind === "thunder") await decode(a.id, root + a.file);
+
+  const sel = $("#citySel");
+  sel.innerHTML = S.roster.cities
+    .map(c => `<option value="${c.slug}">${c.name} · ${c.events} 场 / ${c.playable_hours} h</option>`).join("");
+  sel.onchange = () => loadCity(sel.value);
+  $("#evSel").onchange = () => loadEvent(+$("#evSel").value);
+
+  $("#setup").style.display = "none";
+  document.querySelector("main").style.display = "flex";
+  const prof = S.manifest.asset_profile;
+  $("#hdr").textContent = `引擎 ${S.manifest.engine_version} · ${S.roster.count} 城 · `
+    + (prof ? `素材已体检（下限 参考−${prof.params.drop_db} dB）` : "素材未体检，整条取样");
+  await loadCity(S.roster.cities[0].slug);
+}
+
+async function decode(id, path) {
+  const buf = await grab(path).arrayBuffer();
+  S.buffers.set(id, await S.ctx.decodeAudioData(buf));
+}
+
+async function loadCity(slug) {
+  S.cityDoc = await readJSON(`web_out/index/city/${slug}.json`);
+  const evs = S.cityDoc.events;
+  $("#evSel").innerHTML = evs.map(e =>
+    `<option value="${e.event_id}">${e.start_utc.replace("T"," ")}Z · ${e.hours}h · 峰值 ${e.liquid_peak_mm} mm/h${e.thunder_hours?" · 雷":""}</option>`
+  ).join("");
+  await loadEvent(evs[0].event_id);
+}
+
+async function loadEvent(id) {
+  stop();
+  const ev = S.cityDoc.events.find(e => e.event_id === id);
+  S.score = await readJSON("web_out/" + ev.score);
+  $("#evSel").value = id;
+  S.cursor = 0; S.frame = -1; S.scheduledFrame = -1;
+  $("#play").disabled = false;
+  draw(); paint(0);
+  $("#thNote").textContent = ev.thunder_hours
+    ? `本场 ${ev.thunder_hours} 个小时有雷，峰值 thunder_score ${ev.thunder_peak}。`
+    : "本场无雷。";
+}
+
+// ───────────────────────────────── 播放
+
+function stemTargets(fr) {
+  const out = {};
+  for (const id of LOOP_IDS) out[id] = fr.stems[id] || 0;
+  return out;
+}
+
+async function setupEQ() {
+  if (typeof RainEQ === "undefined") {                    // 同目录没放 rain_eq.js，从选中的文件夹里捞
+    try {
+      const src = await grab("rain_eq.js").text();
+      (0, eval)(src);
+    } catch (e) {
+      say("没找到 rain_eq.js，EQ 关闭；把它和本文件放在一起即可。", true);
+      return;
+    }
+  }
+  let prof;
+  try { prof = await readJSON("eq_profile.json"); }
+  catch (e) {
+    try { prof = await readJSON("web_out/eq_profile.json"); }
+    catch (e2) { say("没找到 eq_profile.json，EQ 关闭。", true); return; }
+  }
+  S.eq = await RainEQ.create(S.ctx, prof);
+  S.eq.out.connect(S.master);
+  S.eq.setIndoor(0);
+}
+
+function applyFrame(k, when, frameStart) {
+  const fr = S.score.frames[k];
+  if (!fr) return;
+  if (frameStart === undefined) frameStart = when;
+  const ramp = Math.max(0.08, S.manifest.playback.ramp_seconds * S.secPerFrame / 3600);
+  if (S.eq) S.eq.setFrame(fr.intensity, fr.character, when, ramp);
+  const tgt = stemTargets(fr);
+  for (const [id, st] of S.stems) {
+    st.gain.gain.setTargetAtTime(tgt[id], when, ramp / 3);
+    if (tgt[id] > 0.004 && !st.running) startLoop(st);
+  }
+  setWindLfo(fr, when);
+
+  // 雷：压缩倍速下按响度保留一部分，否则 10 秒里砸 20 下没法听
+  let strikes = fr.thunder || [];
+  const compress = 3600 / S.secPerFrame;
+  if (compress > 1 && strikes.length > 1) {
+    const keep = Math.max(1, Math.round(strikes.length / Math.sqrt(compress)));
+    strikes = [...strikes].sort((a,b) => b.gain - a.gain).slice(0, keep).sort((a,b) => a.at - b.at);
+  }
+  for (const s of strikes) fireThunder(s, frameStart + s.at * S.secPerFrame / 3600);
+}
+
+function fireThunder(s, when) {
+  const buf = S.buffers.get(s.asset);
+  if (!buf || when < S.ctx.currentTime) return;
+  const src = S.ctx.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = s.rate || 1;
+  const g = S.ctx.createGain();
+  g.gain.value = s.gain;
+  const pan = S.ctx.createStereoPanner ? S.ctx.createStereoPanner() : null;
+  const tail = pan ? (pan.pan.value = s.pan, pan) : g;
+  if (pan) src.connect(g).connect(pan); else src.connect(g);
+  if (S.eq && S.eq.enabled) {
+    const th = S.eq.thunderNode(s.gain);
+    tail.connect(th.input);
+    th.output.connect(S.master);
+    S.eq.duck(s.gain, when);
+  } else {
+    tail.connect(S.master);
+  }
+  src.start(when);
+}
+
+function setWindLfo(fr, when) {
+  for (const id of ["wind_breeze","wind_strong"]) {
+    const st = S.stems.get(id); if (!st) continue;
+    const lfo = fr.wind_lfo;
+    if (!lfo || !(fr.stems[id] > 0)) { if (st.lfoGain) st.lfoGain.gain.setTargetAtTime(0, when, .3); continue; }
+    if (!st.lfo) {
+      st.lfo = S.ctx.createOscillator();
+      st.lfoGain = S.ctx.createGain();
+      st.lfo.connect(st.lfoGain).connect(st.gain.gain);   // 与基准增益相加
+      st.lfo.start();
+    }
+    st.lfo.frequency.setTargetAtTime(lfo.rate_hz * 3600 / S.secPerFrame, when, .2);
+    st.lfoGain.gain.setTargetAtTime(lfo.depth * (fr.stems[id] || 0), when, .3);
+  }
+}
+
+// 循环层：随机取片段首尾等功率交叠，既避开编码器补白造成的接缝，
+// 也让同一条素材每次听起来不一样。
+// 下一段必须在上一段放完之前就排进时间线，所以用固定周期的前瞻泵，
+// 不能挂 onended——那时候接缝已经断了。
+function startLoop(st) {
+  if (st.running) return;
+  st.running = true;
+  st.sources = [];
+  st.next = S.ctx.currentTime + 0.05;
+  armStem(st, true);
+  pump();
+}
+
+function pump() {
+  if (!S.ctx) return;
+  const now = S.ctx.currentTime;
+  for (const st of S.stems.values()) {
+    if (!st.running) continue;
+    let guard = 0;
+    try {
+      while (st.next < now + LOOKAHEAD && guard++ < 4) scheduleRun(st);
+    } catch (e) { st.running = false; warn("排片失败：" + e.message); }
+  }
+}
+
+// 素材本身是连续录音，所以不切碎——一次把当前区段从读头一直排到段尾，
+// 整段一个音源，中间是逐样本连续的原始录音，没有任何拼接。
+// 只有走到区段末尾要跳走时才做一次等功率交叠。
+function regionsOf(st) {
+  const dur = st.buffer.duration;
+  const raw = (st.regions && st.regions.length)
+    ? st.regions : [[TRIM, Math.max(TRIM, dur - TRIM)]];
+  const ok = raw.filter(r => Math.min(r[1], dur) - r[0] >= MIN_RUN);
+  return ok.length ? ok : raw;
+}
+
+// 选好下一段的读头。首次进入随机切入，之后从段首开始，让每次连播尽量长。
+function armStem(st, firstTime) {
+  const regs = regionsOf(st);
+  st.region = regs[Math.floor(Math.random() * regs.length)];
+  const a = st.region[0], b = Math.min(st.region[1], st.buffer.duration);
+  st.pos = firstTime ? a + Math.random() * Math.max(0, (b - a) - MIN_RUN) : a;
+  if (firstTime) st.fadeIn = true;
+}
+
+function scheduleRun(st) {
+  if (!st.region) armStem(st, true);
+  const rb = Math.min(st.region[1], st.buffer.duration);
+  const len = rb - st.pos;
+  if (len < MIN_RUN) { armStem(st, false); return; }
+
+  const src = S.ctx.createBufferSource();
+  src.buffer = st.buffer;
+  const g = S.ctx.createGain();
+  src.connect(g).connect(st.gain);
+
+  const t = Math.max(st.next, S.ctx.currentTime + 0.05);
+  if (st.next && t > st.next + 0.05) warn("排片赶不上，接缝处可能有断点（切到后台标签页会这样）");
+  if (st.fadeIn) { g.gain.setValueCurveAtTime(FADE_IN, t, XFADE); st.fadeIn = false; }
+  else g.gain.setValueAtTime(1, t);
+  g.gain.setValueCurveAtTime(FADE_OUT, t + len - XFADE, XFADE);
+
+  src.start(t, st.pos, len + TRIM);
+  src.stop(t + len + TRIM);
+  st.sources.push(src);
+  if (st.sources.length > 6) st.sources.shift();
+
+  st.next = t + len - XFADE;      // 下一段提前 XFADE 接上，交叠区等功率
+  st.fadeIn = true;
+  armStem(st, false);
+}
+
+$("#play").onclick = () => S.playing ? stop() : start();
+
+async function start() {
+  await S.ctx.resume();
+  S.playing = true;
+  $("#play").textContent = "停止";
+  S.t0 = S.ctx.currentTime - S.cursor * S.secPerFrame;
+  S.frame = -1; S.scheduledFrame = -1;
+  for (const st of S.stems.values()) st.running = false;
+  clearInterval(S.pumpId);
+  S.pumpId = setInterval(pump, PUMP_MS);
+  tick();
+}
+
+function stop() {
+  S.playing = false;
+  $("#play").textContent = "播放";
+  cancelAnimationFrame(S.rafId);
+  clearInterval(S.pumpId);
+  for (const st of S.stems.values()) {
+    st.gain.gain.cancelScheduledValues(S.ctx ? S.ctx.currentTime : 0);
+    if (S.ctx) st.gain.gain.setTargetAtTime(0, S.ctx.currentTime, .05);
+    st.running = false;
+    st.region = null;
+    for (const src of (st.sources || [])) { try { src.stop(); } catch (e) {} }
+    st.sources = [];
+    if (st.lfoGain) st.lfoGain.gain.setTargetAtTime(0, S.ctx.currentTime, .05);
+  }
+}
+
+function tick() {
+  if (!S.playing) return;
+  const total = S.score.frames.length;
+  S.cursor = (S.ctx.currentTime - S.t0) / S.secPerFrame;
+  if (S.cursor >= total) { S.cursor = total; stop(); paint(total - 1e-6); draw(); return; }
+  const k = Math.floor(S.cursor);
+  if (k !== S.scheduledFrame) {
+    S.scheduledFrame = k;
+    applyFrame(k, S.ctx.currentTime, S.t0 + k * S.secPerFrame);
+  }
+  paint(S.cursor); draw(); paintEQ();
+  S.rafId = requestAnimationFrame(tick);
+}
+
+$("#rate").onchange = e => {
+  const was = S.playing; if (was) stop();
+  S.secPerFrame = +e.target.value;
+  if (was) start();
+};
+$("#eqOn").onchange = e => { if (S.eq) { S.eq.setEnabled(e.target.checked); paintEQ(); } };
+$("#indoor").oninput = e => { if (S.eq) { S.eq.setIndoor(e.target.value / 100); paintEQ(); } };
+
+function paintEQ() {
+  const el = $("#eqRead");
+  if (!el) return;
+  if (!S.eq) { el.textContent = "EQ 未载入"; return; }
+  const st = S.eq.state;
+  if (!st.enabled) { el.textContent = "EQ 旁路，当前是引擎原始输出"; return; }
+  const b = st.bands || [];
+  el.innerHTML = b.length
+    ? `高通 <b>${b[0].f.toFixed(0)}</b> Hz ・ 低架 <b>${b[1].gain>=0?"+":""}${b[1].gain.toFixed(1)}</b> ・ `
+      + `400Hz <b>${b[2].gain.toFixed(1)}</b> ・ 3.2k <b>${b[3].gain>=0?"+":""}${b[3].gain.toFixed(1)}</b> ・ `
+      + `9k <b>${b[4].gain.toFixed(1)}</b> ・ 补偿 <b>${st.makeup_db>=0?"+":""}${st.makeup_db.toFixed(2)}</b> dB`
+      + `<br>室内低通 <b>${st.indoor_lowpass_hz.toFixed(0)}</b> Hz` + (st.indoor > 0.02 ? "（隔窗）" : "（户外）")
+    : "等待第一帧";
+}
+
+$("#vol").oninput = e => {
+  const v = e.target.value / 100;
+  if (S.master) S.master.gain.setTargetAtTime(v * v, S.ctx.currentTime, .05);
+};
+
+$("#rndBtn").onclick = async () => {
+  const h = new Date().getUTCHours();
+  const pool = await readJSON(`web_out/index/hour/${String(h).padStart(2,"0")}.json`);
+  const slugs = Object.keys(pool.cities);
+  if (!slugs.length) return say("此刻 UTC " + h + " 点，全库无雨。", true);
+  const slug = slugs[Math.floor(Math.random() * slugs.length)];   // 城市层面等权
+  const [eid, frame] = pool.cities[slug][Math.floor(Math.random() * pool.cities[slug].length)];
+  $("#citySel").value = slug;
+  await loadCity(slug);
+  await loadEvent(eid);
+  S.cursor = frame + new Date().getUTCMinutes() / 60;             // 连分钟一起对齐
+  paint(S.cursor); draw();
+  say("");
+};
+
+// ───────────────────────────────── 信号带
+
+const cv = $("#cv"), ctx2 = cv.getContext("2d");
+
+function draw() {
+  const fr = S.score ? S.score.frames : [];
+  const w = cv.clientWidth, h = 154, dpr = devicePixelRatio || 1;
+  if (cv.width !== w * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+  ctx2.setTransform(dpr,0,0,dpr,0,0);
+  ctx2.clearRect(0,0,w,h);
+  if (!fr.length) return;
+
+  const pad = 14, thBand = 22, top = pad, bot = h - pad - thBand;
+  const n = fr.length, sx = i => pad + (w - 2*pad) * i / n;
+
+  // 小时格
+  ctx2.strokeStyle = "#1B2A35"; ctx2.lineWidth = 1;
+  for (let i = 0; i <= n; i++) {
+    ctx2.beginPath(); ctx2.moveTo(sx(i)+.5, top); ctx2.lineTo(sx(i)+.5, bot); ctx2.stroke();
+  }
+
+  // 填色画的是「实际会听到多响」，描边画的是「雨下得多大」。
+  // 两条不一样：0.3 mm/h 的 intensity 是 0，但主增益只低 4 dB，照样有声。
+  // 以 -12 dB 为显示参考，填色到底就意味着真的静音。
+  const lvl = f => clamp((( f.master_db ?? 0 ) + 12) / 12, 0, 1);
+  const grad = ctx2.createLinearGradient(0, bot, 0, top);
+  grad.addColorStop(0, "#3E6F8E33"); grad.addColorStop(1, "#6FD3E8cc");
+  ctx2.beginPath(); ctx2.moveTo(sx(0), bot);
+  fr.forEach((f,i) => { const y = bot - (bot-top)*lvl(f);
+    ctx2.lineTo(sx(i), y); ctx2.lineTo(sx(i+1), y); });
+  ctx2.lineTo(sx(n), bot); ctx2.closePath();
+  ctx2.fillStyle = grad; ctx2.fill();
+  ctx2.strokeStyle = "#6FD3E8"; ctx2.lineWidth = 1.25;
+  ctx2.beginPath();
+  fr.forEach((f,i) => { const y = bot - (bot-top)*f.intensity;
+    if (i===0) ctx2.moveTo(sx(i), y); else ctx2.lineTo(sx(i), y); ctx2.lineTo(sx(i+1), y); });
+  ctx2.stroke();
+
+  // 雷刻度
+  ctx2.strokeStyle = "#22323E";
+  ctx2.beginPath(); ctx2.moveTo(pad, bot+.5); ctx2.lineTo(w-pad, bot+.5); ctx2.stroke();
+  fr.forEach((f,i) => (f.thunder||[]).forEach(t => {
+    const x = sx(i + t.at/3600), len = 4 + 14 * clamp(t.gain,0,1);
+    ctx2.strokeStyle = "#F0B34A"; ctx2.globalAlpha = .35 + .65*clamp(t.gain,0,1);
+    ctx2.beginPath(); ctx2.moveTo(x, bot+3); ctx2.lineTo(x, bot+3+len); ctx2.stroke();
+  }));
+  ctx2.globalAlpha = 1;
+
+  // 播放头
+  if (S.cursor > 0 || S.playing) {
+    const x = sx(S.cursor);
+    ctx2.strokeStyle = "#E4EDF3"; ctx2.lineWidth = 1;
+    ctx2.beginPath(); ctx2.moveTo(x, top-6); ctx2.lineTo(x, h-pad); ctx2.stroke();
+  }
+}
+
+$("#strip").onclick = e => {
+  if (!S.score) return;
+  const r = cv.getBoundingClientRect(), pad = 14;
+  const f = clamp((e.clientX - r.left - pad) / (r.width - 2*pad), 0, .9999);
+  S.cursor = f * S.score.frames.length;
+  if (S.playing) { stop(); start(); } else { paint(S.cursor); draw(); }
+};
+$("#strip").onmousemove = e => {
+  if (!S.score) return;
+  const r = cv.getBoundingClientRect(), pad = 14;
+  const i = Math.floor(clamp((e.clientX-r.left-pad)/(r.width-2*pad),0,.9999) * S.score.frames.length);
+  const fr = S.score.frames[i], hv = $("#hover");
+  hv.style.display = "block";
+  hv.style.left = Math.min(r.width - 190, Math.max(0, e.clientX - r.left + 10)) + "px";
+  hv.textContent = `${fr.utc.slice(5).replace("T"," ")}Z · ${fr.ui ? fr.ui.liquid_mm : "?"} mm/h · i=${fr.intensity}`;
+};
+$("#strip").onmouseleave = () => $("#hover").style.display = "none";
+addEventListener("resize", draw);
+
+// ───────────────────────────────── 读出
+
+const LABEL = {
+  rain_light_steady:"轻雨 · 持续", rain_light_gusty:"轻雨 · 阵性",
+  rain_mid:"中雨量", rain_heavy:"大雨量",
+  wind_breeze:"微风", wind_strong:"大风",
+};
+
+function paint(cursor) {
+  const fr = S.score.frames[clamp(Math.floor(cursor), 0, S.score.frames.length-1)];
+  const u = fr.ui || {};
+
+  $("#stems").innerHTML = LOOP_IDS.map(id => {
+    const v = fr.stems[id] || 0, st = S.stems.get(id);
+    const n = st && st.regions ? st.regions.length : 0;
+    const badge = n > 1 ? `<span title="素材被切成 ${n} 段，中间有变弱处已排除">·${n}</span>`
+                : (st && !st.regions ? `<span title="未体检，整条取样">·?</span>` : "");
+    return `<div class="stem ${v>0.004?"hot":""}">
+      <span class="n ${v>0.004?"":"off"}">${LABEL[id]}${badge}</span>
+      <span class="meter"><i style="width:${clamp(v,0,1)*100}%"></i></span>
+      <span class="v">${v>0.004 ? v.toFixed(3) : "—"}</span></div>`;
+  }).join("");
+
+  $("#bigLiq").innerHTML = `${(u.liquid_mm ?? 0).toFixed(2)}<small> mm/h</small>`;
+  $("#tagI").textContent = "intensity " + fr.intensity;
+  $("#tagC").textContent = fr.character < .35 ? "层状连绵" : fr.character > .65 ? "阵性" : "过渡";
+  const th = (fr.thunder||[]).length;
+  $("#tagT").style.display = th ? "inline-block" : "none";
+  $("#tagT").textContent = `雷 ×${th}`;
+
+  const rows = [
+    ["UTC", fr.utc.replace("T"," ") + "Z"],
+    ["当地", fr.local.replace("T"," ") + `（${S.score.timezone}）`],
+    ["帧", `${fr.i+1} / ${S.score.frames.length}`],
+    ["主增益", fr.master_db + " dB"],
+    ["character", fr.character],
+    ["风 / 阵风", `${u.wind_ms ?? "—"} / ${u.gust_ms ?? "—"} m/s`],
+    ["等效风速", (u.wind_eff_ms ?? "—") + " m/s"],
+    ["气温", (u.temp_c ?? "—") + " °C"],
+    ["云量 / 能见度", `${u.cloud_pct ?? "—"}% / ${u.visibility_m ?? "—"} m`],
+    ["CAPE", (u.cape ?? "—") + " J/kg"],
+    ["thunder_score", u.thunder_score ?? "—"],
+    ["weather_code", u.weather_code ?? "—"],
+    ["降雪", `${u.snowfall_cm ?? 0} cm（不发声）`],
+    ["昼夜", u.is_day ? "昼" : "夜"],
+  ];
+  $("#read").innerHTML = rows.map(([k,v]) => `<tr><td class="k">${k}</td><td class="v">${v}</td></tr>`).join("");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+{
+  "engine_version": "1.0.0",
+  "built_at_utc": "2026-07-30T09:32:08+00:00",
+  "audio_root": "sound/",
+  "assets": [
+    {
+      "id": "rain_light_steady",
+      "kind": "rain",
+      "rung": 0,
+      "character": "steady",
+      "file": "Rain/soundsforyou-soft-rain-ambient-111154.mp3",
+      "source": "https://pixabay.com/sound-effects/soft-rain-ambient-111154/",
+      "label": "轻雨（持续）",
+      "loop": true,
+      "duration_s": 540.238,
+      "regions": [
+        [
+          11.75,
+          119.45
+        ],
+        [
+          122.15,
+          229.85
+        ],
+        [
+          232.55,
+          340.25
+        ],
+        [
+          342.15,
+          450.65
+        ],
+        [
+          453.35,
+          533.45
+        ]
+      ],
+      "usable_ratio": 0.9472
+    },
+    {
+      "id": "rain_light_gusty",
+      "kind": "rain",
+      "rung": 0,
+      "character": "convective",
+      "file": "Rain/soundsforyou-calm-rain-ambient-sound-15-min-147850.mp3",
+      "source": "https://pixabay.com/sound-effects/nature-calm-rain-ambient-sound-15-min-147850/",
+      "label": "轻雨（急骤携风）",
+      "loop": true,
+      "duration_s": 900.075,
+      "regions": [
+        [
+          1.35,
+          471.05
+        ],
+        [
+          471.75,
+          898.25
+        ]
+      ],
+      "usable_ratio": 0.9957
+    },
+    {
+      "id": "rain_mid",
+      "kind": "rain",
+      "rung": 1,
+      "character": null,
+      "file": "Rain/u_dui2p5vt45-rain-heavy-loud-191411.mp3",
+      "source": "https://pixabay.com/sound-effects/nature-rain-heavy-loud-191411/",
+      "label": "中雨量",
+      "loop": true,
+      "duration_s": 495.621,
+      "regions": [
+        [
+          0.15,
+          495.45
+        ]
+      ],
+      "usable_ratio": 0.9994
+    },
+    {
+      "id": "rain_heavy",
+      "kind": "rain",
+      "rung": 2,
+      "character": null,
+      "file": "Rain/adsabbhelp-heavy-raining-rain-on-tree-natural-clear-sound-abbas-ali-quiet-life-relaxing-music-11938.mp3",
+      "source": "https://pixabay.com/sound-effects/nature-heavy-raining-rain-on-tree-natural-clear-sound-abbas-ali-quiet-life-relaxing-music-11938/",
+      "label": "大雨量",
+      "loop": true,
+      "duration_s": 862.694,
+      "regions": [
+        [
+          0.15,
+          862.544
+        ]
+      ],
+      "usable_ratio": 0.9997
+    },
+    {
+      "id": "wind_breeze",
+      "kind": "wind",
+      "rung": 0,
+      "file": "Wind/freesound_community-bushes-medium-heavy-wind-in-dry-vegetation-19537.mp3",
+      "source": "https://pixabay.com/sound-effects/nature-bushes-medium-heavy-wind-in-dry-vegetation-19537/",
+      "label": "微风",
+      "loop": true,
+      "duration_s": 589.152,
+      "regions": [
+        [
+          0.15,
+          23.85
+        ],
+        [
+          32.55,
+          39.85
+        ],
+        [
+          45.75,
+          60.65
+        ],
+        [
+          62.55,
+          167.05
+        ],
+        [
+          167.75,
+          377.45
+        ],
+        [
+          378.15,
+          469.05
+        ],
+        [
+          571.35,
+          580.65
+        ]
+      ],
+      "usable_ratio": 0.7813
+    },
+    {
+      "id": "wind_strong",
+      "kind": "wind",
+      "rung": 1,
+      "file": "Wind/restfuldreamingtunes-sounds-of-nature-wind-in-the-desert-262406.mp3",
+      "source": "https://pixabay.com/sound-effects/nature-sounds-of-nature-wind-in-the-desert-262406/",
+      "label": "大风",
+      "loop": true,
+      "duration_s": 630.335,
+      "regions": [
+        [
+          1.35,
+          62.25
+        ],
+        [
+          66.55,
+          152.25
+        ],
+        [
+          156.55,
+          226.25
+        ],
+        [
+          230.55,
+          316.25
+        ],
+        [
+          320.55,
+          390.25
+        ],
+        [
+          394.55,
+          476.65
+        ],
+        [
+          484.55,
+          554.65
+        ],
+        [
+          558.55,
+          627.85
+        ]
+      ],
+      "usable_ratio": 0.9411
+    },
+    {
+      "id": "thunder_far_01",
+      "kind": "thunder",
+      "proximity": "far",
+      "has_rain_bed": true,
+      "file": "Thunder/572443__trp__180806-thunder-distant-rolling-boomy-rain-drops-toronto_01.flac",
+      "source": "https://freesound.org/people/TRP/sounds/572443/",
+      "loop": false,
+      "duration_s": 6.58
+    },
+    {
+      "id": "thunder_far_02",
+      "kind": "thunder",
+      "proximity": "far",
+      "has_rain_bed": true,
+      "file": "Thunder/572443__trp__180806-thunder-distant-rolling-boomy-rain-drops-toronto_02.flac",
+      "source": "https://freesound.org/people/TRP/sounds/572443/",
+      "loop": false,
+      "duration_s": 9.419
+    },
+    {
+      "id": "thunder_near_01",
+      "kind": "thunder",
+      "proximity": "near",
+      "has_rain_bed": false,
+      "file": "Thunder/796529__fran_marenco__dry-storm-thunders_01.flac",
+      "source": "https://freesound.org/people/fran_marenco/sounds/796529/",
+      "loop": false,
+      "duration_s": 3.742
+    },
+    {
+      "id": "thunder_near_02",
+      "kind": "thunder",
+      "proximity": "near",
+      "has_rain_bed": false,
+      "file": "Thunder/796529__fran_marenco__dry-storm-thunders_02.flac",
+      "source": "https://freesound.org/people/fran_marenco/sounds/796529/",
+      "loop": false,
+      "duration_s": 3.742
+    },
+    {
+      "id": "thunder_near_03",
+      "kind": "thunder",
+      "proximity": "near",
+      "has_rain_bed": false,
+      "file": "Thunder/796529__fran_marenco__dry-storm-thunders_03.flac",
+      "source": "https://freesound.org/people/fran_marenco/sounds/796529/",
+      "loop": false,
+      "duration_s": 4.209
+    },
+    {
+      "id": "thunder_near_04",
+      "kind": "thunder",
+      "proximity": "near",
+      "has_rain_bed": false,
+      "file": "Thunder/796529__fran_marenco__dry-storm-thunders_04.flac",
+      "source": "https://freesound.org/people/fran_marenco/sounds/796529/",
+      "loop": false,
+      "duration_s": 5.397
+    },
+    {
+      "id": "thunder_near_05",
+      "kind": "thunder",
+      "proximity": "near",
+      "has_rain_bed": false,
+      "file": "Thunder/796529__fran_marenco__dry-storm-thunders_05.flac",
+      "source": "https://freesound.org/people/fran_marenco/sounds/796529/",
+      "loop": false,
+      "duration_s": 8.071
+    },
+    {
+      "id": "thunder_near_06",
+      "kind": "thunder",
+      "proximity": "near",
+      "has_rain_bed": false,
+      "file": "Thunder/796529__fran_marenco__dry-storm-thunders_06.flac",
+      "source": "https://freesound.org/people/fran_marenco/sounds/796529/",
+      "loop": false,
+      "duration_s": 5.708
+    },
+    {
+      "id": "thunder_near_07",
+      "kind": "thunder",
+      "proximity": "near",
+      "has_rain_bed": false,
+      "file": "Thunder/796529__fran_marenco__dry-storm-thunders_07.flac",
+      "source": "https://freesound.org/people/fran_marenco/sounds/796529/",
+      "loop": false,
+      "duration_s": 7.572
+    },
+    {
+      "id": "thunder_near_08",
+      "kind": "thunder",
+      "proximity": "near",
+      "has_rain_bed": false,
+      "file": "Thunder/796529__fran_marenco__dry-storm-thunders_08.flac",
+      "source": "https://freesound.org/people/fran_marenco/sounds/796529/",
+      "loop": false,
+      "duration_s": 4.396
+    },
+    {
+      "id": "thunder_near_09",
+      "kind": "thunder",
+      "proximity": "near",
+      "has_rain_bed": false,
+      "file": "Thunder/796529__fran_marenco__dry-storm-thunders_09.flac",
+      "source": "https://freesound.org/people/fran_marenco/sounds/796529/",
+      "loop": false,
+      "duration_s": 3.011
+    },
+    {
+      "id": "thunder_near_10",
+      "kind": "thunder",
+      "proximity": "near",
+      "has_rain_bed": false,
+      "file": "Thunder/796529__fran_marenco__dry-storm-thunders_10.flac",
+      "source": "https://freesound.org/people/fran_marenco/sounds/796529/",
+      "loop": false,
+      "duration_s": 11.562
+    }
+  ],
+  "playback": {
+    "frame_seconds": 3600,
+    "ramp_seconds": 30,
+    "city_switch_gap_ms": 1200,
+    "clock_alignment": "utc_hour_of_day",
+    "note": "1 个数据小时 = 1 小时实时播放；stems 增益为最终绝对值"
+  },
+  "thresholds": {
+    "rain_floor_mm_h": 0.3,
+    "min_event_audible_hours": 1,
+    "min_event_peak_mm_h": 0.3,
+    "wind_floor_ms": 3.4,
+    "wind_strong_full_ms": 15.0,
+    "thunder_min_score": 0.05,
+    "downpour_cap_mm_h": 15.0
+  },
+  "calibration": {
+    "mode": "max",
+    "absolute_anchors_mm_h": [
+      [
+        0.3,
+        0.0
+      ],
+      [
+        1.0,
+        0.25
+      ],
+      [
+        2.5,
+        0.5
+      ],
+      [
+        7.5,
+        0.8
+      ],
+      [
+        15.0,
+        1.0
+      ]
+    ],
+    "city_levels": [
+      0.35,
+      0.65,
+      0.88,
+      1.0
+    ]
+  },
+  "level_trim_db": {
+    "rain_light_steady": 0.0,
+    "rain_light_gusty": 0.0,
+    "rain_mid": 0.0,
+    "rain_heavy": 0.0,
+    "wind_breeze": 0.0,
+    "wind_strong": 0.0,
+    "thunder": 0.0,
+    "thunder_far_01": -9.49,
+    "thunder_far_02": -11.34,
+    "thunder_near_01": -2.05,
+    "thunder_near_02": -2.05,
+    "thunder_near_03": 0.47,
+    "thunder_near_04": -0.83,
+    "thunder_near_05": 0.96,
+    "thunder_near_06": -0.47,
+    "thunder_near_07": 1.8,
+    "thunder_near_08": 6.31,
+    "thunder_near_09": 1.58,
+    "thunder_near_10": 4.21
+  },
+  "asset_profile": {
+    "profile_version": "1.0.0",
+    "generated_at_utc": "2026-07-30T07:50:23+00:00",
+    "params": {
+      "block_s": 0.4,
+      "drop_db": 3.0,
+      "min_region_s": 6.0,
+      "guard_s": 0.15
+    }
+  },
+  "coverage_utc": {
+    "start": "2025-10-08T12:00",
+    "end": "2026-07-01T23:00"
+  },
+  "cities": 57,
+  "snow_policy": "降雪不参与发声，只写入 ui 字段",
+  "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES. 音频素材来自 Pixabay 与 Freesound，逐条许可见 assets[].source。"
+}

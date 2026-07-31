@@ -1,0 +1,101 @@
+{
+  "fetched_at_utc": "2026-07-28T16:16:19.407383+00:00",
+  "city": {
+    "slug": "taipei",
+    "name": "台北",
+    "timezone": "Asia/Taipei"
+  },
+  "requested_coordinates": {
+    "latitude": 25.033,
+    "longitude": 121.5654
+  },
+  "grid_cell": {
+    "latitude": 25.06151,
+    "longitude": 121.5194,
+    "elevation_m": 12.0
+  },
+  "model": "ecmwf_ifs",
+  "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
+  "requested_range_utc": {
+    "start": "2025-10-01",
+    "end": "2026-07-01"
+  },
+  "index_range_utc": {
+    "start": "2025-10-08T12:00",
+    "end": "2026-07-01T23:00"
+  },
+  "variables_fetched": [
+    "precipitation",
+    "rain",
+    "showers",
+    "snowfall",
+    "snowfall_water_equivalent",
+    "snow_depth",
+    "weather_code",
+    "cape",
+    "convective_inhibition",
+    "boundary_layer_height",
+    "temperature_2m",
+    "wind_speed_10m",
+    "wind_gusts_10m",
+    "wind_direction_10m",
+    "cloud_cover",
+    "visibility",
+    "is_day",
+    "soil_moisture_0_to_7cm"
+  ],
+  "variables_rejected": {},
+  "gap_tolerant_fields": {
+    "convective_inhibition": "空值视为无抑制，cin_term = 1.0"
+  },
+  "units_raw": {
+    "time": "iso8601",
+    "precipitation": "mm",
+    "rain": "mm",
+    "showers": "mm",
+    "snowfall": "cm",
+    "snowfall_water_equivalent": "mm",
+    "snow_depth": "m",
+    "weather_code": "wmo code",
+    "cape": "J/kg",
+    "convective_inhibition": "J/kg",
+    "boundary_layer_height": "m",
+    "temperature_2m": "°C",
+    "wind_speed_10m": "m/s",
+    "wind_gusts_10m": "m/s",
+    "wind_direction_10m": "°",
+    "cloud_cover": "%",
+    "visibility": "m",
+    "is_day": "",
+    "soil_moisture_0_to_7cm": "m³/m³"
+  },
+  "derived_units": {
+    "liquid_mm": "mm/h，= precipitation − snowfall_water_equivalent",
+    "wind_ms": "m/s",
+    "gust_ms": "m/s",
+    "visibility_m": "m",
+    "snow_depth_m": "m",
+    "pbl_m": "m",
+    "thunder_score": "无量纲，0–1，已移除 li_term，λ 系数需重新标定",
+    "gap_to_next": "小时；-1 表示本区间内此后不再降水"
+  },
+  "statistics": {
+    "hours": 6396,
+    "audible_hours": 927,
+    "audible_ratio": 0.1449,
+    "liquid_p50": 0.7,
+    "liquid_p85": 2.6,
+    "liquid_p97": 6.722000000000002,
+    "liquid_max": 27.1,
+    "events": 189,
+    "event_hours_max": 90,
+    "event_hours_median": 3.0,
+    "gap_max": 313,
+    "cin_missing_hours": 169,
+    "weather_code_thunder_hours": 60,
+    "thunder_score_p90": 0.232,
+    "thunder_score_p99": 0.6178900000000015,
+    "thunder_score_max": 1.0
+  },
+  "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."
+}

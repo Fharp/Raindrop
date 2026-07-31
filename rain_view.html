@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>雨窗</title>
+<style>
+html,body{margin:0;height:100%;background:#0a0d0f;overflow:hidden}
+#view{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+/* 临时播放键：音频接进来之前它只负责消失 */
+#play{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:84px;height:84px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.45);
+  background:rgba(10,14,16,.35);color:rgba(255,255,255,.9);
+  font-size:30px;line-height:1;cursor:pointer;
+  backdrop-filter:blur(6px);transition:opacity .5s;
+}
+#play:hover{background:rgba(10,14,16,.55)}
+#play:focus-visible{outline:2px solid rgba(255,255,255,.7);outline-offset:2px}
+#play.hidden{opacity:0;pointer-events:none}
+
+/* ?debug=1 才会出现的调参板 */
+#hud{
+  position:fixed;right:10px;top:10px;
+  font:12px/1.8 ui-monospace,Consolas,monospace;
+  color:rgba(255,255,255,.85);background:rgba(0,0,0,.45);
+  padding:10px 12px;border-radius:6px;user-select:none;
+}
+#hud label{display:block;white-space:nowrap}
+#hud input{width:150px;vertical-align:middle}
+#hud span{display:inline-block;width:3.2em;text-align:right}
+#err{position:fixed;left:12px;bottom:12px;color:#e88;font:12px/1.5 monospace;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<button id="play" aria-label="播放">&#9205;</button>
+
+<script src="rain_glass.js"></script>
+<script>
+(async function () {
+  const q = new URLSearchParams(location.search);
+  const num = (k, d) => {
+    const v = parseFloat(q.get(k));
+    return Number.isFinite(v) ? v : d;
+  };
+
+  const rg = await RainGlass.mount({
+    canvas: document.getElementById("view"),
+    image: q.get("img") || "future_sakmei-doomsday-style-7715286_1920.jpg",
+    intensity: num("i", 0.55),
+    wind: num("wind", 0),
+    character: num("c", 0.3),
+  });
+  window.rg = rg;   // 控制台直接 rg.set({intensity:0.8}) / RainGlass.CFG.xx=...
+
+  // 临时播放键：现在只负责消失。音频接入时在这里起播，
+  // 或在别处监听 window 上的 rainglass:play 事件。
+  document.getElementById("play").addEventListener("click", (e) => {
+    e.currentTarget.classList.add("hidden");
+    window.dispatchEvent(new CustomEvent("rainglass:play"));
+  });
+
+  // 无 UI 状态下的调试入口——
+  // 数字 0–9：intensity 0..1    ←/→：wind ∓0.1
+  // ↑/↓：character ±0.1        F：一键回雾
+  let sync = null;
+  addEventListener("keydown", (e) => {
+    const st = rg.state;
+    if (e.key >= "0" && e.key <= "9") rg.set({ intensity: (+e.key) / 9 });
+    else if (e.key === "ArrowLeft") rg.set({ wind: st.wind - 0.1 });
+    else if (e.key === "ArrowRight") rg.set({ wind: st.wind + 0.1 });
+    else if (e.key === "ArrowUp") rg.set({ character: st.character + 0.1 });
+    else if (e.key === "ArrowDown") rg.set({ character: st.character - 0.1 });
+    else if (e.key === "f" || e.key === "F") rg.refog();
+    else return;
+    e.preventDefault();
+    if (sync) sync();
+  });
+
+  // ?debug=1：临时调参板 + 帧率。正式页面没有它。
+  if (q.get("debug")) {
+    const hud = document.createElement("div");
+    hud.id = "hud";
+    hud.innerHTML =
+      '<label>intensity <input id="hi" type="range" min="0" max="1" step="0.01"> <span id="hiv"></span></label>' +
+      '<label>wind <input id="hw" type="range" min="-1" max="1" step="0.01"> <span id="hwv"></span></label>' +
+      '<label>character <input id="hc" type="range" min="0" max="1" step="0.01"> <span id="hcv"></span></label>' +
+      '<div id="hf"></div>';
+    document.body.appendChild(hud);
+    const $ = (id) => document.getElementById(id);
+    sync = () => {
+      const s = rg.state;
+      $("hi").value = s.intensity; $("hiv").textContent = s.intensity.toFixed(2);
+      $("hw").value = s.wind;      $("hwv").textContent = s.wind.toFixed(2);
+      $("hc").value = s.character; $("hcv").textContent = s.character.toFixed(2);
+    };
+    [["hi", "intensity"], ["hw", "wind"], ["hc", "character"]].forEach(([id, key]) => {
+      $(id).addEventListener("input", (e) => {
+        rg.set({ [key]: +e.target.value });
+        sync();
+      });
+    });
+    sync();
+    setInterval(() => { $("hf").textContent = rg.stats.fps.toFixed(0) + " fps"; }, 500);
+  }
+
+  /* 接引擎渲染谱时（示意）——每帧一次：
+     rg.set({
+       intensity: frame.intensity,
+       character: frame.character,
+       wind: windPan * windGain,   // 方向来自 ui.wind_pan（缺省取 +1），
+     });                           // 大小来自风层 stem 的增益之和（0..1）
+  */
+})().catch((e) => {
+  const pre = document.createElement("pre");
+  pre.id = "err";
+  pre.textContent = String(e && e.message || e);
+  document.body.appendChild(pre);
+  console.error(e);
+});
+</script>
+</body>
+</html>

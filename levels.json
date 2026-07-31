@@ -1,0 +1,11 @@
+{
+  "_说明": "素材间响度补偿，单位 dB，正数变响。用试听台把四条雨依次单独听一遍，",
+  "_说明2": "调到「同一 intensity 下换层不觉得跳」为止。改完重跑引擎即可，不必重抓数据。",
+  "rain_light_steady": 0.0,
+  "rain_light_gusty": 0.0,
+  "rain_mid": 0.0,
+  "rain_heavy": 0.0,
+  "wind_breeze": 0.0,
+  "wind_strong": 0.0,
+  "thunder": 0.0
+}
