@@ -5,29 +5,86 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>雨窗</title>
 <style>
+/* 正文用思源宋体的 Google 版本（Noto Serif SC）。OFL 1.1，无保留字体名，
+   可商用、可自行子集化后不改名。子集由 make_font_subset.py 依名册生成，
+   放在 fonts/ 下；取不到时下面的栈会退到系统里的宋体。 */
+@font-face{
+  font-family:"Noto Serif SC";
+  src:url("fonts/NotoSerifSC-rain.woff2") format("woff2");
+  font-weight:200 900;
+  font-style:normal;
+  font-display:block;
+}
+
+:root{
+  --serif:"Noto Serif SC","Source Han Serif SC","Source Han Serif CN",
+          "Songti SC","SimSun",serif;
+  --ink:rgba(255,255,255,.92);
+}
+
 html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 #view{position:fixed;inset:0;width:100%;height:100%;display:block}
 
 /* 闪电：整屏一层，亮点位置跟着雷的 pan 走 */
 #flash{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen}
 
-#play{
-  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:84px;height:84px;border-radius:42px;
-  border:1px solid rgba(255,255,255,.4);
-  background:rgba(8,12,14,.35);color:rgba(255,255,255,.9);
-  font-size:30px;line-height:1;cursor:pointer;
-  backdrop-filter:blur(8px);transition:opacity .8s;
+/* ── 文字层。两行都不承担任何状态提示，只说此地此刻与正在放的那场雨。 */
+#caption{
+  position:fixed;left:min(6vw,74px);top:min(7.5vh,60px);max-width:82vw;
+  z-index:2;pointer-events:none;user-select:none;
+  font-family:var(--serif);font-weight:300;color:var(--ink);
+  text-shadow:0 1px 20px rgba(0,0,0,.42),0 0 3px rgba(0,0,0,.22);
+  opacity:0;transition:opacity 1.8s ease;
 }
-#play:hover{background:rgba(8,12,14,.55)}
-#play:disabled{cursor:default;background:rgba(8,12,14,.35)}
-#play.hidden{opacity:0;pointer-events:none}
-/* 载入中：不写字，只让按钮自己呼吸 */
+#caption.on{opacity:1}
+#head{
+  display:flex;align-items:baseline;gap:.62em;
+  font-size:clamp(30px,3.7vw,54px);line-height:1.18;letter-spacing:.18em;
+}
+#place{margin-right:-.18em}                     /* 抵掉字距在末字后面留的那一格 */
+#clock{
+  font-size:.86em;letter-spacing:.07em;opacity:.9;
+  font-variant-numeric:tabular-nums lining-nums;
+}
+#line{
+  margin-top:.6em;font-size:clamp(19px,2.4vw,34px);
+  line-height:1.6;letter-spacing:.16em;opacity:.84;
+  transition:opacity .45s ease;
+}
+
+/* 唯一的控件：示意图里那个方框。它自己就是播放键，不再有圆钮。 */
+#play{
+  position:fixed;left:50%;top:62%;transform:translate(-50%,-50%);z-index:3;
+  padding:.72em 1.72em .72em 2.28em;   /* 左右差 .56em：抵掉末字后面那一格，字才真在框中间 */
+  border-radius:0;
+  border:1px solid rgba(255,255,255,.55);
+  background:rgba(8,12,14,.3);color:rgba(255,255,255,.92);
+  font-family:var(--serif);font-weight:300;
+  font-size:clamp(20px,2.1vw,30px);line-height:1.15;
+  letter-spacing:.56em;
+  white-space:nowrap;cursor:pointer;
+  text-shadow:0 1px 14px rgba(0,0,0,.4);
+  backdrop-filter:blur(8px);
+  transition:opacity .28s,border-color .4s,background-color .4s,color .4s;
+}
+#play:hover:not(:disabled){
+  border-color:rgba(255,255,255,.85);background:rgba(8,12,14,.5);color:#fff;
+}
+#play:disabled{cursor:default}
+/* 消失比出现慢：收起来要不着痕迹，唤回来要跟得上手 */
+#play.hidden{opacity:0;pointer-events:none;transition:opacity .9s}
+/* 载入中：不写字，只让方框自己呼吸 */
 #play.loading{animation:breathe 2.2s ease-in-out infinite}
 @keyframes breathe{0%,100%{opacity:.85}50%{opacity:.3}}
+#play:focus-visible{outline:1px solid rgba(255,255,255,.75);outline-offset:6px}
+
+@media (prefers-reduced-motion:reduce){
+  #caption,#line,#play{transition:none}
+  #play.loading{animation:none}
+}
 
 #hud{
-  position:fixed;right:10px;top:10px;width:290px;
+  position:fixed;right:10px;top:10px;width:290px;z-index:4;
   font:12px/1.7 ui-monospace,Consolas,monospace;color:rgba(255,255,255,.85);
   background:rgba(0,0,0,.55);padding:10px 12px;border-radius:6px;user-select:none;
 }
@@ -39,7 +96,7 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 #hud hr{border:0;border-top:1px solid rgba(255,255,255,.15);margin:8px 0}
 #hud .dim{color:rgba(255,255,255,.45)}
 #err{
-  position:fixed;left:14px;bottom:14px;margin:0;max-width:70vw;
+  position:fixed;left:14px;bottom:14px;margin:0;max-width:70vw;z-index:5;
   color:#e8a0a0;font:12px/1.6 ui-monospace,Consolas,monospace;white-space:pre-wrap;
 }
 </style>
@@ -47,13 +104,21 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 <body>
 <canvas id="view"></canvas>
 <div id="flash"></div>
-<button id="play" class="loading" disabled>&#9205;</button>
+
+<div id="caption">
+  <div id="head"><span id="place"></span><span id="clock"></span></div>
+  <div id="line"></div>
+</div>
+
+<button id="play" class="loading" disabled>聆听</button>
 
 <!-- raindrop-fx 的预打包文件，见 SPEC-VIEW.md 第 1 节 -->
 <script src="bundle/index.js"></script>
 <script src="rain_eq.js"></script>
 <script src="rain_audio.js"></script>
 <script src="rain_bridge.js"></script>
+<script src="rain_place.js"></script>
+<script src="rain_caption.js"></script>
 <script>
 (async function () {
 "use strict";
@@ -62,6 +127,15 @@ const num = (k, d) => { const v = parseFloat(q.get(k)); return Number.isFinite(v
 const $   = s => document.querySelector(s);
 const btn = $("#play");
 const DEBUG = !!q.get("debug");
+
+// 左上角那座城决定放谁的雨。?follow=0 关掉：城市只表示「你在哪」，
+// 放哪一场仍按 UTC 钟点全局随机。
+const FOLLOW = q.get("follow") !== "0";
+
+// 播放器要到 RainAudio.create 才建出来，但下面的文字层一起手就会去读它，
+// 所以声明必须先于所有使用者——否则 let 的暂时性死区会把整个 IIFE 打断
+// （表现就是全黑 + can't access lexical declaration 'audio' before initialization）。
+let audio = null;
 
 // ── 失败必须看得见。这一版所有 await 都带超时，绝不允许再出现
 //    「一片黑、没有任何提示」的状态。
@@ -82,6 +156,16 @@ function timed(p, ms, what) {
   ]);
 }
 
+// ── 文字层。时钟一上来就走；整块要等城市与字体到位才淡入，
+//    中途不写任何占位字。
+const caption = (typeof RainCaption !== "undefined") ? RainCaption.attach({
+  root:  $("#caption"),
+  city:  $("#place"),
+  clock: $("#clock"),
+  line:  $("#line"),
+  audio: () => audio,
+}).start() : null;
+
 // ── 画布。默认 dpr 压到 1：画面本来就蒙着一层雾，锐度没用；
 //    省下来的填充率换成更多水珠，那才是「一直在下」的观感来源。?dpr=1.5 可提高。
 const canvas = $("#view");
@@ -92,8 +176,47 @@ const fit = () => {
 };
 fit();
 
+// ── 选片：限定城市，仍按 SPEC 第 3 节的「城市随机」口径——
+//    UTC 钟点对齐，该城此刻没下过雨就退回该城任意一场。
+let place = null;
+async function pickInCity(a, slug) {
+  const was = a.playing;
+  if (was) a.stop();                    // 先停：否则 loadEvent 会自己抢着重启一次
+  await a.loadCity(slug);
+  const now  = new Date();
+  const cand = (a.cityDoc.hour_of_day && a.cityDoc.hour_of_day[String(now.getUTCHours())]) || [];
+  let evId, frame = 0;
+  if (cand.length) {
+    const hit = cand[(Math.random() * cand.length) | 0];
+    evId = hit[0]; frame = hit[1];
+  } else {
+    const evs = a.cityDoc.events;
+    if (!evs || !evs.length) throw new Error(slug + " 没有可放的场次");
+    evId = evs[(Math.random() * evs.length) | 0].event_id;
+  }
+  await a.loadEvent(evId);
+  // 切入点与 SPEC 第 3 节一致：帧起点 + 当前 UTC 的分秒，播满一小时正好跨帧
+  const off = (now.getUTCMinutes() * 60 + now.getUTCSeconds()) / 3600;
+  a.cursor  = Math.min(frame + off, Math.max(0, a.score.frames.length - 1e-6));
+  if (was) await a.play();
+}
+const reroll = a => (FOLLOW && place) ? pickInCity(a, place.slug) : a.pickRandom();
+
+// 定位单独走，不挡起播：用户可能在权限弹窗还开着的时候就想按播放。
+async function settlePlace(a) {
+  if (typeof RainPlace === "undefined") { if (caption) caption.reveal(); return; }
+  try { place = await RainPlace.resolve(a.roster); } catch (e) { place = null; }
+  if (place) {
+    if (caption) caption.setPlace(place.name, place.timezone);
+    // 已经在放了就不打断，只改左上角
+    if (FOLLOW && !a.playing) { try { await pickInCity(a, place.slug); } catch (e) { /* 保留原来那场 */ } }
+    if (DEBUG) console.debug("[rain] 城市", place.name, place.source,
+      place.distanceKm ? place.distanceKm.toFixed(0) + " km" : "");
+  }
+  if (caption) caption.reveal();
+}
+
 // ── 音频先起飞，且与画面互不牵连：画面挂了也照样能听。
-let audio = null;
 stage = "预载音频";
 RainAudio.create({
   root: "./",
@@ -101,8 +224,9 @@ RainAudio.create({
   volume: num("vol", 0.7),
 }).then(a => {
   audio = window.audio = a;
-  a.onend = () => a.pickRandom().then(() => a.play()).catch(e => fail(e, "换场"));
-  return timed(a.ready, 180000, "解码雨层");
+  a.onend = () => reroll(a).then(() => a.play()).catch(e => fail(e, "换场"));
+  settlePlace(a);
+  return timed(a.readyFirst || a.ready, 180000, "解码雨层");
 }).then(() => {
   btn.disabled = false;
   btn.classList.remove("loading");
@@ -192,14 +316,34 @@ addEventListener("resize", () => {
   if (ready) { try { fx.resize(canvas.width, canvas.height); } catch (e) { fail(e, "改变窗口尺寸"); } }
 });
 
-// ── 播放键
+// ── 方框。没在放时常驻，写「聆听」；放起来之后收走，
+//    有任何动作再露一下，此时写「静音」——按下去实际是暂停。
+const IDLE_MS = 2600;
+let idleTimer = 0;
+
+function showBox(auto) {
+  btn.textContent = (audio && audio.playing) ? "静音" : "聆听";
+  btn.classList.remove("hidden");
+  clearTimeout(idleTimer);
+  if (auto && audio && audio.playing) idleTimer = setTimeout(hideBox, IDLE_MS);
+}
+function hideBox() { clearTimeout(idleTimer); btn.classList.add("hidden"); }
+
+// 收起来的时候不改字，免得淡出过程中被看见换字；下次露面时才写对。
+for (const ev of ["pointermove", "pointerdown", "wheel", "touchstart", "keydown"]) {
+  addEventListener(ev, () => { if (audio && audio.playing) showBox(true); }, { passive: true });
+}
+// 鼠标停在框上就别收，哪怕它一动不动
+btn.addEventListener("pointerenter", () => clearTimeout(idleTimer));
+btn.addEventListener("pointerleave", () => { if (audio && audio.playing) showBox(true); });
+
 btn.addEventListener("click", async () => {
   if (!audio) return;
   try {
-    if (audio.playing) { audio.stop(); btn.classList.remove("hidden"); return; }
+    if (audio.playing) { audio.stop(); showBox(false); return; }
     await audio.play();
     if (bridge) bridge.audio = audio;
-    btn.classList.add("hidden");
+    hideBox();
   } catch (e) { fail(e, "起播"); }
 });
 
@@ -208,9 +352,10 @@ btn.addEventListener("click", async () => {
 //   0–9 空转时的雨强
 addEventListener("keydown", e => {
   if (e.target && /^(INPUT|SELECT)$/.test(e.target.tagName)) return;
-  if (e.key === " ") btn.click();
+  // 方框自己有焦点时，空格由浏览器原生触发一次 click，这里不能再补一次
+  if (e.key === " ") { if (e.target === btn) return; btn.click(); }
   else if ((e.key === "d" || e.key === "D") && audio) {
-    audio.pickRandom().then(() => audio.playing && audio.play())
+    reroll(audio).then(() => audio.playing && audio.play())
       .then(() => { fillCities(); fillEvents(); }).catch(e2 => fail(e2, "换场"));
   }
   else if ((e.key === "[" || e.key === "]") && audio) stepEvent(e.key === "]" ? 1 : -1);

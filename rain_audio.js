@@ -61,15 +61,18 @@ class RainAudio {
   }
 
   async _fetchAudio(path) {
+    // 素材是不会变的，命中磁盘缓存就直接用，不再回源验证。
+    // 代价：重新转码或裁剪之后必须硬刷新（Ctrl+Shift+R），否则拿到的还是旧那份。
+    const opt = { cache: "force-cache" };
     if (this.preferOpus && this._fmt !== "orig") {
       const alt = path.replace(/\.[^./]+$/, ".opus");
       if (alt !== path) {
-        const r = await fetch(this.root + alt);
+        const r = await fetch(this.root + alt, opt);
         if (r.ok) { this._fmt = "opus"; return r.arrayBuffer(); }
         this._fmt = "orig";
       }
     }
-    const r = await fetch(this.root + path);
+    const r = await fetch(this.root + path, opt);
     if (!r.ok) throw new Error("取不到素材 " + path + "（HTTP " + r.status + "）");
     return r.arrayBuffer();
   }
@@ -127,15 +130,34 @@ class RainAudio {
       });
     }
 
-    // 全部并发起飞。play() 只等它当前那一帧真正要用的几条，其余边放边到。
-    this.ready = Promise.all(RAIN_IDS.map(id => this._load(id).catch(e => { this._err = e.message; })));
-    for (const id of WIND_IDS) this._load(id).catch(e => { this._err = e.message; });
-    for (const a of this.manifest.assets) {
-      if (a.kind === "thunder") this._load(a.id).catch(() => {});
-    }
+    await this.pickRandom();     // 谱只有几 KB，先挑好——知道切入帧落在哪，才知道哪几条是关键路径
 
-    await this.pickRandom();     // 谱只有几 KB，顺手挑好
+    // 起播真正要等的，只有切入帧上有增益的那几条，通常一到两条。
+    this.readyFirst = this.readyFor();
+
+    // 其余的排在它后面。并发解码抢的是同一批线程，早排只会把关键路径拖慢。
+    this.ready = this.readyFirst.catch(() => {}).then(() => {
+      // 雷很小（十二条合计约 73 秒），跟剩下的雨层一起走，免得开头的雷落空
+      for (const a of this.manifest.assets) {
+        if (a.kind === "thunder") this._load(a.id).catch(() => {});
+      }
+      return Promise.all(RAIN_IDS.map(id => this._load(id).catch(e => { this._err = e.message; })));
+    });
+    this.ready.then(() => {
+      for (const id of WIND_IDS) this._load(id).catch(e => { this._err = e.message; });
+    });
+
     return this;
+  }
+
+  /** 切入帧真正要发声的那几条解好没有。起播只需要等这个，不必等四层雨全解完。 */
+  readyFor() {
+    if (!this.score) return Promise.resolve();
+    const fr = this.score.frames[Math.min(
+      Math.floor(this.cursor), this.score.frames.length - 1)];
+    if (!fr) return Promise.resolve();
+    const need = LOOP_IDS.filter(id => (fr.stems[id] || 0) > 0.004);
+    return Promise.all((need.length ? need : [RAIN_IDS[0]]).map(id => this._load(id)));
   }
 
   async _setupEQ() {
@@ -217,10 +239,7 @@ class RainAudio {
 
   async play() {
     if (!this.score) throw new Error("还没有选谱");
-    // 只等当前这一帧真正要发声的那几条，其余后台继续
-    const fr = this.score.frames[Math.min(Math.floor(this.cursor), this.score.frames.length - 1)];
-    const need = LOOP_IDS.filter(id => (fr.stems[id] || 0) > 0.004);
-    await Promise.all((need.length ? need : [RAIN_IDS[0]]).map(id => this._load(id)));
+    await this.readyFor();       // 只等当前这一帧真正要发声的那几条，其余后台继续
 
     await this.ctx.resume();
     this.playing = true;
