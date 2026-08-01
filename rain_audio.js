@@ -1,15 +1,19 @@
 /* rain_audio.js — 渲染谱播放器（HTTP 版）
  *
- * 与 audition.html 里的引擎是同一套排片逻辑，只有两处不同：
- *   1. 素材与谱子走 fetch，不走文件夹选择器；
- *   2. 对外吐出逐帧状态与实时电平，供视觉层取用。
+ * 排片逻辑与 audition.html 是同一套（等功率交叠、区段随机切入、前瞻泵）。
+ * 三处不同：
+ *   1. 素材与谱子走 fetch；
+ *   2. 一进页面就开始预载，点播放时只 resume，把点击延迟压到最低；
+ *   3. 对外吐出逐帧状态、实时电平与雷的精确时刻，供视觉层取用。
  *
- * 不含任何界面。用法见 SPEC-VIEW.md。
+ * 不含任何界面，也不产生任何可显示的文本。
  */
 (function (global) {
 "use strict";
 
-const LOOP_IDS = ["rain_light_steady","rain_light_gusty","rain_mid","rain_heavy","wind_breeze","wind_strong"];
+const RAIN_IDS = ["rain_light_steady", "rain_light_gusty", "rain_mid", "rain_heavy"];
+const WIND_IDS = ["wind_breeze", "wind_strong"];
+const LOOP_IDS = [...RAIN_IDS, ...WIND_IDS];
 const TRIM = 0.05, XFADE = 0.5, MIN_RUN = 4, LOOKAHEAD = 3.0, PUMP_MS = 200;
 
 // 等功率淡化曲线。两段不相关的噪声按功率相加，必须满足 a²+b²=1 才不塌电平。
@@ -23,14 +27,15 @@ for (let i = 0; i < FADE_PTS; i++) {
 
 const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 
-// ───────────────────────────────── 引擎
-
 class RainAudio {
   constructor(opts) {
     this.root        = opts.root || "./";
-    this.secPerFrame = opts.secPerFrame || 3600;   // 1 帧 = 1 数据小时，默认实时
+    this.secPerFrame = opts.secPerFrame || 3600;
     this.volume      = opts.volume != null ? opts.volume : 0.7;
     this.useEQ       = opts.eq !== false;
+    // 优先找同名 .opus。素材转码后体积小一个量级，解码也快得多，
+    // 点击延迟主要就是被这一步吃掉的。找不到就退回 manifest 里写的原始文件。
+    this.preferOpus  = opts.preferOpus !== false;
 
     this.manifest = null; this.roster = null;
     this.cityDoc = null;  this.score = null;
@@ -40,94 +45,121 @@ class RainAudio {
 
     this.playing = false; this.cursor = 0;
     this._t0 = 0; this._scheduled = -1; this._pumpId = 0; this._rafId = 0;
-    this._flashes = [];        // 已排进时间线、还没到点的雷
+    this._flashes = [];
     this._levelBuf = null; this._level = 0;
+    this._pending = new Map();     // asset id -> Promise
+    this._fmt = null;              // null 未知 / "opus" / "orig"
     this._err = null;
   }
+
+  // ───────────────────────────────── 取文件
 
   async _json(path) {
     const r = await fetch(this.root + path, { cache: "force-cache" });
     if (!r.ok) throw new Error("取不到 " + path + "（HTTP " + r.status + "）");
     return r.json();
   }
-  async _decode(id, path) {
+
+  async _fetchAudio(path) {
+    if (this.preferOpus && this._fmt !== "orig") {
+      const alt = path.replace(/\.[^./]+$/, ".opus");
+      if (alt !== path) {
+        const r = await fetch(this.root + alt);
+        if (r.ok) { this._fmt = "opus"; return r.arrayBuffer(); }
+        this._fmt = "orig";
+      }
+    }
     const r = await fetch(this.root + path);
     if (!r.ok) throw new Error("取不到素材 " + path + "（HTTP " + r.status + "）");
-    this.buffers.set(id, await this.ctx.decodeAudioData(await r.arrayBuffer()));
+    return r.arrayBuffer();
   }
 
-  // 先建图、解码，再选谱。素材总量约 120 MB，首次进来要等一会儿。
-  async boot(onProgress) {
-    const step = onProgress || (() => {});
-    step("读取 manifest …");
+  // 每个 asset 一个 promise，重复请求直接复用
+  _load(id) {
+    if (this._pending.has(id)) return this._pending.get(id);
+    const a = this.assetById.get(id);
+    if (!a) return Promise.reject(new Error("manifest 里没有 " + id));
+    const root = this.manifest.audio_root || "sound/";
+    const p = this._fetchAudio(root + a.file)
+      .then(buf => this.ctx.decodeAudioData(buf))
+      .then(dec => {
+        this.buffers.set(id, dec);
+        const st = this.stems.get(id);
+        if (st) st.buffer = dec;
+        return dec;
+      });
+    this._pending.set(id, p);
+    return p;
+  }
+
+  // ───────────────────────────────── 起步
+
+  // 一进页面就调。建图、开始预载、并先挑好一场雨，
+  // 之后点播放只剩 ctx.resume()，几乎没有延迟。
+  async boot() {
     this.manifest = await this._json("web_out/manifest.json");
     this.roster   = await this._json("web_out/index/cities.json");
     for (const a of this.manifest.assets) this.assetById.set(a.id, a);
 
     const AC = global.AudioContext || global.webkitAudioContext;
-    this.ctx = new AC();
+    this.ctx = new AC();                  // 此时是 suspended，解码照常可用
     this.master = this.ctx.createGain();
     this.master.gain.value = this.volume * 0.7;
     this.master.connect(this.ctx.destination);
 
-    // 视觉层用的电平表。只挂在 master 上旁听，不接 destination。
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 1024;
     this.analyser.smoothingTimeConstant = 0.2;
     this.master.connect(this.analyser);
     this._levelBuf = new Float32Array(this.analyser.fftSize);
 
-    if (this.useEQ) await this._setupEQ(step);
+    if (this.useEQ) await this._setupEQ();
 
-    const root = this.manifest.audio_root || "sound/";
-    let n = 0;
     for (const id of LOOP_IDS) {
       const a = this.assetById.get(id);
       if (!a) continue;
-      step("解码循环层 " + (++n) + "/" + LOOP_IDS.length + " …");
-      await this._decode(id, root + a.file);
       const g = this.ctx.createGain();
       g.gain.value = 0;
       g.connect(this.eq ? (a.kind === "wind" ? this.eq.windIn : this.eq.rainIn) : this.master);
       this.stems.set(id, {
-        gain: g, buffer: this.buffers.get(id), next: 0, lfo: null, lfoGain: null,
-        regions: a.regions || null, running: false, sources: [], region: null,
+        gain: g, buffer: null, next: 0, lfo: null, lfoGain: null,
+        regions: a.regions || null, running: false, sources: [], region: null, target: 0,
       });
     }
 
-    const thunders = this.manifest.assets.filter(a => a.kind === "thunder");
-    n = 0;
-    for (const a of thunders) {
-      step("解码雷 " + (++n) + "/" + thunders.length + " …");
-      await this._decode(a.id, root + a.file);
+    // 全部并发起飞。play() 只等它当前那一帧真正要用的几条，其余边放边到。
+    this.ready = Promise.all(RAIN_IDS.map(id => this._load(id).catch(e => { this._err = e.message; })));
+    for (const id of WIND_IDS) this._load(id).catch(e => { this._err = e.message; });
+    for (const a of this.manifest.assets) {
+      if (a.kind === "thunder") this._load(a.id).catch(() => {});
     }
-    step("就绪");
+
+    await this.pickRandom();     // 谱只有几 KB，顺手挑好
     return this;
   }
 
-  async _setupEQ(step) {
-    if (typeof global.RainEQ === "undefined") return;      // 没引 rain_eq.js 就跳过
+  async _setupEQ() {
+    if (typeof global.RainEQ === "undefined") return;
     let prof = null;
     for (const p of ["eq_profile.json", "web_out/eq_profile.json"]) {
       try { prof = await this._json(p); break; } catch (e) { /* 继续找 */ }
     }
     if (!prof) return;
-    step("建 EQ …");
     this.eq = await global.RainEQ.create(this.ctx, prof);
     this.eq.out.connect(this.master);
     this.eq.setIndoor(0);
   }
 
-  // ─────────────── 选谱
+  // ───────────────────────────────── 选谱
 
-  // 按 SPEC 的 UTC 钟点对齐随机选一场：先查当前钟点有哪些城市在下雨。
+  // 按 SPEC 的 UTC 钟点对齐随机选一场
   async pickRandom() {
     const now = new Date();
     const hh = String(now.getUTCHours()).padStart(2, "0");
     let pick = null;
     try {
       const idx = await this._json("web_out/index/hour/" + hh + ".json");
-      const table = idx.cities || idx;                     // 两种可能的外层
+      const table = idx.cities || idx;
       const slugs = Object.keys(table).filter(s => (table[s] || []).length);
       if (slugs.length) {
         const slug = slugs[(Math.random() * slugs.length) | 0];
@@ -150,7 +182,7 @@ class RainAudio {
       : evs[(Math.random() * evs.length) | 0];
     await this.loadEvent(ev.event_id);
 
-    // 切入点：帧内偏移跟着 UTC 的分秒走，播满一小时正好跨到下一帧。
+    // 切入点：帧内偏移跟着 UTC 的分秒走，播满一小时正好跨到下一帧
     const off = (now.getUTCMinutes() * 60 + now.getUTCSeconds()) / 3600;
     this.cursor = clamp(pick.frame + off, 0, Math.max(0, this.score.frames.length - 1e-6));
     return this.info;
@@ -162,17 +194,34 @@ class RainAudio {
   }
 
   async loadEvent(id) {
+    const was = this.playing;
     this.stop();
     const ev = this.cityDoc.events.find(e => e.event_id === id) || this.cityDoc.events[0];
     this.score = await this._json("web_out/" + ev.score);
     this.cursor = 0; this._scheduled = -1;
+    if (was) await this.play();
     return this.score;
   }
 
-  // ─────────────── 播放
+  /** 跳到第 x 帧（可含小数）。调试用，会有一次极短的断口。 */
+  async seek(x) {
+    if (!this.score) return;
+    const was = this.playing;
+    this.stop();
+    this.cursor = clamp(x, 0, this.score.frames.length - 1e-6);
+    this._scheduled = -1;
+    if (was) await this.play();
+  }
+
+  // ───────────────────────────────── 播放
 
   async play() {
     if (!this.score) throw new Error("还没有选谱");
+    // 只等当前这一帧真正要发声的那几条，其余后台继续
+    const fr = this.score.frames[Math.min(Math.floor(this.cursor), this.score.frames.length - 1)];
+    const need = LOOP_IDS.filter(id => (fr.stems[id] || 0) > 0.004);
+    await Promise.all((need.length ? need : [RAIN_IDS[0]]).map(id => this._load(id)));
+
     await this.ctx.resume();
     this.playing = true;
     this._t0 = this.ctx.currentTime - this.cursor * this.secPerFrame;
@@ -193,7 +242,7 @@ class RainAudio {
     for (const st of this.stems.values()) {
       st.gain.gain.cancelScheduledValues(now);
       st.gain.gain.setTargetAtTime(0, now, 0.05);
-      st.running = false; st.region = null;
+      st.running = false; st.region = null; st.target = 0;
       for (const src of st.sources) { try { src.stop(); } catch (e) {} }
       st.sources = [];
       if (st.lfoGain) st.lfoGain.gain.setTargetAtTime(0, now, 0.05);
@@ -225,13 +274,12 @@ class RainAudio {
     const ramp = Math.max(0.08, this.manifest.playback.ramp_seconds * this.secPerFrame / 3600);
     if (this.eq) this.eq.setFrame(fr.intensity, fr.character, when, ramp);
     for (const [id, st] of this.stems) {
-      const tgt = fr.stems[id] || 0;
-      st.gain.gain.setTargetAtTime(tgt, when, ramp / 3);
-      if (tgt > 0.004 && !st.running) this._startLoop(st);
+      st.target = fr.stems[id] || 0;
+      st.gain.gain.setTargetAtTime(st.target, when, ramp / 3);
+      if (st.target > 0.004 && st.buffer && !st.running) this._startLoop(st);
     }
     this._setWindLfo(fr, when);
 
-    // 压缩倍速下按响度保留一部分雷，否则 10 秒里砸 20 下没法听
     let strikes = fr.thunder || [];
     const compress = 3600 / this.secPerFrame;
     if (compress > 1 && strikes.length > 1) {
@@ -243,7 +291,7 @@ class RainAudio {
 
   _fireThunder(s, when) {
     const buf = this.buffers.get(s.asset);
-    if (!buf || when < this.ctx.currentTime) return;
+    if (!buf || when < this.ctx.currentTime) return;    // 还没解码到就跳过这一次
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = s.rate || 1;
@@ -261,12 +309,11 @@ class RainAudio {
       tail.connect(this.master);
     }
     src.start(when);
-    // 视觉层要在同一时刻闪，所以把排好的时间点留一份
     this._flashes.push({ when, gain: s.gain, pan: s.pan || 0 });
   }
 
   _setWindLfo(fr, when) {
-    for (const id of ["wind_breeze", "wind_strong"]) {
+    for (const id of WIND_IDS) {
       const st = this.stems.get(id); if (!st) continue;
       const lfo = fr.wind_lfo;
       if (!lfo || !(fr.stems[id] > 0)) {
@@ -284,9 +331,8 @@ class RainAudio {
     }
   }
 
-  // 循环层：随机取片段、首尾等功率交叠，躲开 mp3 编码器补白，也打散周期感。
   _startLoop(st) {
-    if (st.running) return;
+    if (st.running || !st.buffer) return;
     st.running = true; st.sources = [];
     st.next = this.ctx.currentTime + 0.05;
     this._arm(st, true);
@@ -294,9 +340,11 @@ class RainAudio {
   }
 
   _pump() {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.playing) return;
     const now = this.ctx.currentTime;
     for (const st of this.stems.values()) {
+      // 边放边到：某一层刚解码完就补上
+      if (!st.running && st.buffer && st.target > 0.004) this._startLoop(st);
       if (!st.running) continue;
       let guard = 0;
       try {
@@ -341,14 +389,13 @@ class RainAudio {
     st.sources.push(src);
     if (st.sources.length > 6) st.sources.shift();
 
-    st.next = t + len - XFADE;      // 下一段提前 XFADE 接上，交叠区等功率
+    st.next = t + len - XFADE;
     st.fadeIn = true;
     this._arm(st, false);
   }
 
-  // ─────────────── 给视觉层的出口
+  // ───────────────────────────────── 给视觉层与调试面板的出口
 
-  /** 当前帧的物理量。视觉层每帧读一次。 */
   get state() {
     const fr = this.score && this.score.frames[Math.min(
       Math.floor(this.cursor), this.score.frames.length - 1)];
@@ -367,7 +414,6 @@ class RainAudio {
     };
   }
 
-  /** 实时电平 0..1。做了非线性压扩，安静时也看得出起伏。 */
   get level() {
     if (!this.analyser || !this.playing) return 0;
     this.analyser.getFloatTimeDomainData(this._levelBuf);
@@ -375,18 +421,17 @@ class RainAudio {
     for (let i = 0; i < this._levelBuf.length; i++) s += this._levelBuf[i] * this._levelBuf[i];
     const rms = Math.sqrt(s / this._levelBuf.length);
     const v = clamp(Math.pow(rms * 6, 0.6), 0, 1);
-    this._level += (v - this._level) * 0.25;      // 再平滑一层，去掉逐帧抖动
+    this._level += (v - this._level) * 0.25;
     return this._level;
   }
 
-  /** 取走所有已经响过的雷，供视觉层闪光。每帧调一次。 */
   takeStrikes() {
     if (!this.ctx || !this._flashes.length) return null;
     const now = this.ctx.currentTime;
     let out = null;
     while (this._flashes.length && this._flashes[0].when <= now) {
       const f = this._flashes.shift();
-      if (now - f.when < 0.5) out = (!out || f.gain > out.gain) ? f : out;   // 迟到太久的丢掉
+      if (now - f.when < 0.5) out = (!out || f.gain > out.gain) ? f : out;
     }
     return out;
   }
@@ -400,12 +445,31 @@ class RainAudio {
     };
   }
 
+  /** 进度。调试面板用。 */
+  get progress() {
+    if (!this.score) return null;
+    const total = this.score.frames.length;
+    const k = Math.min(Math.floor(this.cursor), total - 1);
+    return {
+      cursor: this.cursor, frames: total, frame: k,
+      local: this.score.frames[k].local, utc: this.score.frames[k].utc,
+      seconds: this.cursor * this.secPerFrame,
+      totalSeconds: total * this.secPerFrame,
+    };
+  }
+
+  /** 已解码的素材数 / 总数。调试面板用。 */
+  get loaded() {
+    const total = this.manifest ? this.manifest.assets.length : 0;
+    return { done: this.buffers.size, total, format: this._fmt || "?" };
+  }
+
   get error() { return this._err; }
 }
 
 global.RainAudio = {
-  LOOP_IDS,
-  async create(opts, onProgress) { return new RainAudio(opts || {}).boot(onProgress); },
+  LOOP_IDS, RAIN_IDS, WIND_IDS,
+  async create(opts) { return new RainAudio(opts || {}).boot(); },
   _class: RainAudio,
 };
 

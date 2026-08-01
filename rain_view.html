@@ -13,37 +13,41 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 
 #play{
   position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-  min-width:84px;height:84px;padding:0 16px;border-radius:42px;
+  width:84px;height:84px;border-radius:42px;
   border:1px solid rgba(255,255,255,.4);
   background:rgba(8,12,14,.35);color:rgba(255,255,255,.9);
-  font:400 15px/1 ui-monospace,Consolas,monospace;letter-spacing:.02em;
-  cursor:pointer;backdrop-filter:blur(8px);transition:opacity .8s;
+  font-size:30px;line-height:1;cursor:pointer;
+  backdrop-filter:blur(8px);transition:opacity .8s;
 }
-#play .glyph{font-size:30px}
 #play:hover{background:rgba(8,12,14,.55)}
-#play:disabled{cursor:default}
+#play:disabled{cursor:default;background:rgba(8,12,14,.35)}
 #play.hidden{opacity:0;pointer-events:none}
+/* 载入中：不写字，只让按钮自己呼吸 */
+#play.loading{animation:breathe 2.2s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.85}50%{opacity:.3}}
 
-#where{
-  position:fixed;left:0;right:0;bottom:26px;text-align:center;
-  font:12px/1.6 ui-monospace,Consolas,monospace;color:rgba(255,255,255,.34);
-  opacity:0;transition:opacity 1.6s;pointer-events:none;
+#hud{
+  position:fixed;right:10px;top:10px;width:290px;
+  font:12px/1.7 ui-monospace,Consolas,monospace;color:rgba(255,255,255,.85);
+  background:rgba(0,0,0,.55);padding:10px 12px;border-radius:6px;user-select:none;
 }
-#where.on{opacity:1}
-
-#hud{position:fixed;right:10px;top:10px;font:12px/1.7 ui-monospace,Consolas,monospace;
-     color:rgba(255,255,255,.85);background:rgba(0,0,0,.45);padding:10px 12px;border-radius:6px;user-select:none}
-#hud label{display:block;white-space:nowrap}
-#hud input{width:150px;vertical-align:middle}
-#hud b{display:inline-block;width:3.4em;text-align:right;font-weight:400}
-#err{position:fixed;left:12px;bottom:12px;margin:0;color:#e88;font:12px/1.5 monospace;white-space:pre-wrap;max-width:60vw}
+#hud select,#hud input{width:100%;box-sizing:border-box;font:inherit}
+#hud select{background:#111;color:#ddd;border:1px solid #333;border-radius:3px;padding:2px}
+#hud .row{display:flex;gap:8px;align-items:center;white-space:nowrap}
+#hud .row input[type=range]{flex:1}
+#hud b{display:inline-block;min-width:3.4em;text-align:right;font-weight:400}
+#hud hr{border:0;border-top:1px solid rgba(255,255,255,.15);margin:8px 0}
+#hud .dim{color:rgba(255,255,255,.45)}
+#err{
+  position:fixed;left:14px;bottom:14px;margin:0;max-width:70vw;
+  color:#e8a0a0;font:12px/1.6 ui-monospace,Consolas,monospace;white-space:pre-wrap;
+}
 </style>
 </head>
 <body>
 <canvas id="view"></canvas>
 <div id="flash"></div>
-<button id="play"><span class="glyph">&#9205;</span></button>
-<div id="where"></div>
+<button id="play" class="loading" disabled>&#9205;</button>
 
 <!-- raindrop-fx 的预打包文件，见 SPEC-VIEW.md 第 1 节 -->
 <script src="bundle/index.js"></script>
@@ -56,128 +60,259 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 const q   = new URLSearchParams(location.search);
 const num = (k, d) => { const v = parseFloat(q.get(k)); return Number.isFinite(v) ? v : d; };
 const $   = s => document.querySelector(s);
-const btn = $("#play"), where = $("#where");
+const btn = $("#play");
+const DEBUG = !!q.get("debug");
 
-function fail(e) {
+// ── 失败必须看得见。这一版所有 await 都带超时，绝不允许再出现
+//    「一片黑、没有任何提示」的状态。
+let stage = "启动";
+function fail(e, where) {
   let pre = $("#err");
   if (!pre) { pre = document.createElement("pre"); pre.id = "err"; document.body.appendChild(pre); }
-  pre.textContent = String((e && e.message) || e);
-  console.error(e);
+  pre.textContent = "卡在：" + (where || stage) + "\n" + String((e && e.message) || e);
+  btn.classList.remove("loading");
+  console.error("[rain]", where || stage, e);
+}
+function timed(p, ms, what) {
+  let id;
+  return Promise.race([
+    Promise.resolve(p).finally(() => clearTimeout(id)),
+    new Promise((_, rej) => { id = setTimeout(
+      () => rej(new Error(what + "：" + (ms / 1000) + " 秒内没有完成，也没有报错")), ms); }),
+  ]);
 }
 
-// ── 画布。像素比压到 1.5 封顶：上千颗水珠的合成是逐像素的，全分辨率不值当。
+// ── 画布。默认 dpr 压到 1：画面本来就蒙着一层雾，锐度没用；
+//    省下来的填充率换成更多水珠，那才是「一直在下」的观感来源。?dpr=1.5 可提高。
 const canvas = $("#view");
-const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+const dpr = Math.min(window.devicePixelRatio || 1, num("dpr", 1));
 const fit = () => {
   canvas.width  = Math.round(innerWidth  * dpr);
   canvas.height = Math.round(innerHeight * dpr);
 };
 fit();
 
+// ── 音频先起飞，且与画面互不牵连：画面挂了也照样能听。
+let audio = null;
+stage = "预载音频";
+RainAudio.create({
+  root: "./",
+  secPerFrame: num("sec", 3600),        // ?sec=30 压缩倍速，用来快速看一场雨的全程
+  volume: num("vol", 0.7),
+}).then(a => {
+  audio = window.audio = a;
+  a.onend = () => a.pickRandom().then(() => a.play()).catch(e => fail(e, "换场"));
+  return timed(a.ready, 180000, "解码雨层");
+}).then(() => {
+  btn.disabled = false;
+  btn.classList.remove("loading");
+  if (DEBUG) { fillCities(); fillEvents(); }
+}).catch(e => fail(e, "预载音频"));
+
+// ── 视觉层
 if (typeof RaindropFX === "undefined") {
-  fail("缺 bundle/index.js。到 github.com/SardineFish/raindrop-fx 取 bundle/index.js，放进 bundle/ 目录。");
+  fail(new Error("bundle/index.js 没加载。到 github.com/SardineFish/raindrop-fx 取 bundle/index.js 放进 bundle/。"), "加载 raindrop-fx");
   return;
 }
 
-const fx = new RaindropFX({
-  canvas,
-  background: q.get("img") || "1.jpg",
-  // 起手参数只定量级；逐帧的值由 rain_bridge 覆写
-  spawnLimit: 1400,
-  backgroundBlurSteps: 4,
-  mist: true,
-  mistBlurStep: 5,
-  mistColor: [0.035, 0.042, 0.05, 1],     // 雾偏冷，配底图的青调
-  refractBase: 0.42,
-  refractScale: 0.62,
-  raindropCompose: "smoother",
-  raindropLightPos: [-1, 1, 2, 0],
-  raindropDiffuseLight: [0.22, 0.24, 0.26],
-  raindropSpecularLight: [0, 0, 0],
-  raindropShadowOffset: 0.75,
-  raindropLightBump: 0.7,
-  smoothRaindrop: [0.955, 0.995],
-});
-window.fx = fx;
-
-const bridge = RainBridge.attach(fx, null, $("#flash"));
-window.bridge = bridge;
-try { await bridge.start(); }
-catch (e) { fail("WebGL2 起不来，或底图取不到：" + (e.message || e)); return; }
-
-addEventListener("resize", () => { fit(); fx.resize(canvas.width, canvas.height); });
-
-// ── 音频。素材约 120 MB，第一次要等；进度写在按钮上。
-let audio = null;
-btn.addEventListener("click", async () => {
-  if (audio) { audio.playing ? audio.stop() : audio.play(); return; }
-  btn.disabled = true;
-  btn.innerHTML = '<span id="prog">读取中…</span>';
-  const prog = $("#prog");
-  try {
-    audio = await RainAudio.create({
-      root: "./",
-      secPerFrame: num("sec", 3600),        // ?sec=30 压缩倍速，用来快速看一场雨的全程
-      volume: num("vol", 0.7),
-    }, m => { prog.textContent = m; });
-    bridge.audio = audio;
-    const info = await audio.pickRandom();
-    await audio.play();
-    btn.classList.add("hidden");
-    if (info) {
-      const s = info.summary || {};
-      where.textContent = info.cityName + " · " + String(s.start_local || "").replace("T", " ")
-        + " · " + info.hours + " 小时 · 峰值 "
-        + (s.liquid_peak_mm != null ? s.liquid_peak_mm + " mm/h" : "—");
-      where.classList.add("on");
-      setTimeout(() => where.classList.remove("on"), 9000);
-    }
-    audio.onend = () => audio.pickRandom().then(() => audio.play()).catch(fail);
-  } catch (e) {
-    btn.disabled = false;
-    btn.innerHTML = '<span class="glyph">&#9205;</span>';
-    fail(e);
+/* 底图自己load。
+ *
+ * 不能交给库：它的 zogra-renderer 里是这么写的——
+ *     url(u) { const buffer = await fetch(u).then(r => r.arrayBuffer()); … }
+ * 没有检查 r.ok，404 返回的错误页正文照样被当成图片字节；再往下
+ *     if (img.complete) complete(); else img.onload = complete;
+ * 只挂了 onload，**没有 onerror**。于是图片解不出来时那个 Promise
+ * 永远不会 settle：loadAssets() 挂死、start() 不返回、后面的代码一行不跑，
+ * 屏幕全黑且没有任何报错。这正是上一版卡住的形态。
+ * 这里自己 fetch、自己查状态码、自己解码，再把解好的位图直接交给库
+ * （background 接受 TextureData，不一定要是 URL 字符串）。 */
+async function loadBackground(cands) {
+  const tried = [];
+  for (const url of cands) {
+    if (!url) continue;
+    try {
+      const res = await timed(fetch(url, { cache: "force-cache" }), 20000, "取底图 " + url);
+      if (!res.ok) { tried.push(url + " → HTTP " + res.status); continue; }
+      const blob = await res.blob();
+      if (typeof createImageBitmap === "function") {
+        return { url, data: await createImageBitmap(blob) };
+      }
+      const img = new Image();
+      img.src = URL.createObjectURL(blob);
+      await new Promise((ok, no) => {
+        img.onload = ok;
+        img.onerror = () => no(new Error("解码失败，多半不是图片"));
+      });
+      return { url, data: img };
+    } catch (e) { tried.push(url + " → " + ((e && e.message) || e)); }
   }
+  throw new Error("底图一个都取不到：\n  " + tried.join("\n  "));
+}
+
+let fx = null, bridge = null, ready = false;
+try {
+  stage = "取底图";
+  const bg = await loadBackground([
+    q.get("img"), "1.jpg", "future_sakmei-doomsday-style-7715286_1920.jpg",
+  ]);
+  if (DEBUG) console.debug("[rain] 底图", bg.url, bg.data.width + "×" + bg.data.height);
+
+  stage = "建 WebGL2 上下文";
+  fx = window.fx = new RaindropFX({
+    canvas,
+    background: bg.data,                   // 已解码的位图，不走库的 URL 加载
+    // 起手参数只定量级；逐帧的值由 rain_bridge 覆写
+    backgroundBlurSteps: 4,
+    mist: true,
+    mistBlurStep: 5,
+    mistColor: [0.035, 0.042, 0.05, 1],    // 雾偏冷，配底图的青调
+    refractBase: 0.42,
+    refractScale: 0.62,
+    raindropCompose: "smoother",
+    raindropLightPos: [-1, 1, 2, 0],
+    raindropDiffuseLight: [0.22, 0.24, 0.26],
+    raindropSpecularLight: [0, 0, 0],
+    raindropShadowOffset: 0.75,
+    raindropLightBump: 0.7,
+    smoothRaindrop: [0.955, 0.995],
+  });
+
+  stage = "载入水珠贴图并铺底";
+  bridge = window.bridge = RainBridge.attach(fx, null, $("#flash"));
+  bridge.onerror = e => fail(e, "渲染循环");
+  await timed(bridge.start(), 30000, "raindrop-fx 初始化");
+  ready = true;
+  stage = "运行中";
+} catch (e) {
+  fail(e, stage);
+}
+
+addEventListener("resize", () => {
+  fit();
+  if (ready) { try { fx.resize(canvas.width, canvas.height); } catch (e) { fail(e, "改变窗口尺寸"); } }
 });
 
-// ── 无界面的调试入口
-//   空格 播放/停止    0–9 空转时的雨强    ←/→ 空转时的风    D 换一场雨
+// ── 播放键
+btn.addEventListener("click", async () => {
+  if (!audio) return;
+  try {
+    if (audio.playing) { audio.stop(); btn.classList.remove("hidden"); return; }
+    await audio.play();
+    if (bridge) bridge.audio = audio;
+    btn.classList.add("hidden");
+  } catch (e) { fail(e, "起播"); }
+});
+
+// ── 快捷键
+//   空格 播放/停止   D 换一场雨   [ ] 上一场/下一场   ←/→ 快退快进 6 分钟
+//   0–9 空转时的雨强
 addEventListener("keydown", e => {
+  if (e.target && /^(INPUT|SELECT)$/.test(e.target.tagName)) return;
   if (e.key === " ") btn.click();
+  else if ((e.key === "d" || e.key === "D") && audio) {
+    audio.pickRandom().then(() => audio.playing && audio.play())
+      .then(() => { fillCities(); fillEvents(); }).catch(e2 => fail(e2, "换场"));
+  }
+  else if ((e.key === "[" || e.key === "]") && audio) stepEvent(e.key === "]" ? 1 : -1);
+  else if (e.key === "ArrowLeft"  && audio) audio.seek(audio.cursor - 0.1).catch(e2 => fail(e2, "快退"));
+  else if (e.key === "ArrowRight" && audio) audio.seek(audio.cursor + 0.1).catch(e2 => fail(e2, "快进"));
   else if (e.key >= "0" && e.key <= "9") RainBridge.CFG.idle.intensity = (+e.key) / 9;
-  else if (e.key === "ArrowLeft")  RainBridge.CFG.idle.wind -= 0.1;
-  else if (e.key === "ArrowRight") RainBridge.CFG.idle.wind += 0.1;
-  else if ((e.key === "d" || e.key === "D") && audio)
-    audio.pickRandom().then(() => audio.play()).catch(fail);
   else return;
   e.preventDefault();
 });
 
-// ── ?debug=1：滑杆与读数。正式页面没有它。
-if (q.get("debug")) {
-  const hud = document.createElement("div");
+function stepEvent(d) {
+  if (!audio || !audio.cityDoc || !audio.score) return;
+  const evs = audio.cityDoc.events;
+  const at = evs.findIndex(x => x.event_id === audio.score.event_id);
+  const next = evs[Math.max(0, Math.min(evs.length - 1, at + d))];
+  if (next) audio.loadEvent(next.event_id).then(fillEvents).catch(e => fail(e, "切场次"));
+}
+
+// ── ?debug=1：城市 / 场次 / 进度条 / 读数。正式页面没有它。
+let hud = null, seeking = false;
+function fillCities() {
+  if (!hud || !audio || !audio.roster) return;
+  const sel = $("#hCity");
+  if (!sel.options.length) {
+    sel.innerHTML = audio.roster.cities.map(c =>
+      '<option value="' + c.slug + '">' + c.name + " · " + c.events + " 场 / " + c.playable_hours + " h</option>").join("");
+  }
+  if (audio.score) sel.value = audio.score.city;
+}
+function fillEvents() {
+  if (!hud || !audio || !audio.cityDoc) return;
+  const sel = $("#hEv");
+  sel.innerHTML = audio.cityDoc.events.map(e =>
+    '<option value="' + e.event_id + '">' + String(e.start_local || e.start_utc).replace("T", " ") +
+    " · " + e.hours + "h · 峰值 " + e.liquid_peak_mm + " mm/h" + (e.thunder_hours ? " · 雷" : "") + "</option>").join("");
+  if (audio.score) sel.value = String(audio.score.event_id);
+}
+
+if (DEBUG) {
+  hud = document.createElement("div");
   hud.id = "hud";
   hud.innerHTML =
-    '<label>intensity <input id="hi" type="range" min="0" max="1" step="0.01"> <b id="hiv"></b></label>' +
-    '<label>character <input id="hc" type="range" min="0" max="1" step="0.01"> <b id="hcv"></b></label>' +
-    '<label>wind <input id="hw" type="range" min="-1" max="1" step="0.01"> <b id="hwv"></b></label>' +
-    '<div id="hs"></div>';
+    '<select id="hCity"></select>' +
+    '<select id="hEv"></select>' +
+    '<div class="row"><input id="hSeek" type="range" min="0" max="1" step="0.001" value="0"></div>' +
+    '<div id="hPos" class="dim"></div>' +
+    '<hr>' +
+    '<div class="row">i <input id="hi" type="range" min="0" max="1" step="0.01"><b id="hiv"></b></div>' +
+    '<div class="row">c <input id="hc" type="range" min="0" max="1" step="0.01"><b id="hcv"></b></div>' +
+    '<div class="row">w <input id="hw" type="range" min="-1" max="1" step="0.01"><b id="hwv"></b></div>' +
+    '<hr><div id="hs" class="dim"></div>';
   document.body.appendChild(hud);
-  const bind = (id, key) => {
+
+  for (const [id, key] of [["hi", "intensity"], ["hc", "character"], ["hw", "wind"]]) {
     const el = $("#" + id);
     el.value = RainBridge.CFG.idle[key];
     el.addEventListener("input", ev => { RainBridge.CFG.idle[key] = +ev.target.value; });
-  };
-  bind("hi", "intensity"); bind("hc", "character"); bind("hw", "wind");
+  }
+
+  const seek = $("#hSeek");
+  seek.addEventListener("pointerdown", () => { seeking = true; });
+  seek.addEventListener("pointerup",   () => { seeking = false; });
+  seek.addEventListener("change", () => {
+    if (audio && audio.score) audio.seek(+seek.value * audio.score.frames.length).catch(e => fail(e, "拖进度"));
+  });
+  $("#hCity").addEventListener("change", async ev => {
+    if (!audio) return;
+    try {
+      await audio.loadCity(ev.target.value);
+      fillEvents();
+      await audio.loadEvent(audio.cityDoc.events[0].event_id);
+      fillEvents();
+    } catch (e) { fail(e, "换城市"); }
+  });
+  $("#hEv").addEventListener("change", ev => {
+    if (audio) audio.loadEvent(+ev.target.value).catch(e => fail(e, "换场次"));
+  });
+
   let fps = 60, last = performance.now();
   (function poll(now) {
     fps += ((1000 / Math.max(1, now - last)) - fps) * 0.1; last = now;
-    const s = bridge.stats;
-    $("#hiv").textContent = s.i.toFixed(2);
-    $("#hcv").textContent = s.c.toFixed(2);
-    $("#hwv").textContent = s.w.toFixed(2);
-    $("#hs").textContent = fps.toFixed(0) + " fps · " + s.drops + " 滴 · lvl "
-      + s.level.toFixed(2) + (audio && audio.playing ? " · 跟谱" : " · 空转");
+    const s = bridge ? bridge.stats : null;
+    $("#hs").innerHTML = s
+      ? (fps.toFixed(0) + " fps · " + s.drops + "/" + s.limit + " 滴 · " +
+         s.spawnPerSec.toFixed(0) + " 滴/s · 细珠 " + (s.droplets / 1000).toFixed(1) + "k/s<br>" +
+         "S " + s.scale.toFixed(2) + " · 收尸线 " + s.cull.toFixed(0) + " · lvl " + s.level.toFixed(2) +
+         (audio && audio.playing ? " · 跟谱" : " · 空转") +
+         (audio ? " · 素材 " + audio.loaded.done + "/" + audio.loaded.total + " " + audio.loaded.format : ""))
+      : ("画面未启动 · " + stage);
+    if (s) {
+      $("#hiv").textContent = s.i.toFixed(2);
+      $("#hcv").textContent = s.c.toFixed(2);
+      $("#hwv").textContent = s.w.toFixed(2);
+    }
+    if (audio && audio.score) {
+      const p = audio.progress;
+      if (!seeking) seek.value = String(p.cursor / p.frames);
+      const mm = t => String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(Math.floor(t % 60)).padStart(2, "0");
+      $("#hPos").textContent =
+        (audio.info.cityName || "") + " · 第 " + (p.frame + 1) + "/" + p.frames + " 小时 · " +
+        String(p.local || "").replace("T", " ") + " · " + mm(p.seconds) + " / " + mm(p.totalSeconds);
+    }
     requestAnimationFrame(poll);
   })(performance.now());
 }
@@ -186,6 +321,8 @@ if (q.get("debug")) {
   const pre = document.createElement("pre");
   pre.id = "err"; pre.textContent = String((e && e.message) || e);
   document.body.appendChild(pre);
+  const b = document.getElementById("play");
+  if (b) b.classList.remove("loading");
   console.error(e);
 });
 </script>
