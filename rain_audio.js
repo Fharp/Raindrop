@@ -57,24 +57,57 @@ class RainAudio {
   async _json(path) {
     const r = await fetch(this.root + path, { cache: "force-cache" });
     if (!r.ok) throw new Error("取不到 " + path + "（HTTP " + r.status + "）");
-    return r.json();
+    const txt = await r.text();
+    if (txt.charCodeAt(0) === 0x3C) {   // '<'：托管把找不到的路径回落成了网页
+      throw new Error("取 " + path + " 拿回的是网页而不是 JSON，" +
+        "这个文件多半没被部署，且站点缺少顶层 404.html。");
+    }
+    return JSON.parse(txt);
   }
 
   async _fetchAudio(path) {
     // 素材是不会变的，命中磁盘缓存就直接用，不再回源验证。
     // 代价：重新转码或裁剪之后必须硬刷新（Ctrl+Shift+R），否则拿到的还是旧那份。
     const opt = { cache: "force-cache" };
+
     if (this.preferOpus && this._fmt !== "orig") {
       const alt = path.replace(/\.[^./]+$/, ".opus");
       if (alt !== path) {
         const r = await fetch(this.root + alt, opt);
-        if (r.ok) { this._fmt = "opus"; return r.arrayBuffer(); }
+        // 不能只看 r.ok。没有顶层 404.html 时，Cloudflare Pages 会把
+        // 一切找不到的路径按单页应用回落成 index.html + 200，
+        // 于是这里会拿到一整页 HTML 当作 opus，最后死在 decodeAudioData
+        // 的 "unknown content type" 上。认魔数，不认状态码。
+        if (r.ok) {
+          const buf = await r.arrayBuffer();
+          if (RainAudio._sniff(buf) === "ogg") { this._fmt = "opus"; return buf; }
+        }
         this._fmt = "orig";
       }
     }
+
     const r = await fetch(this.root + path, opt);
     if (!r.ok) throw new Error("取不到素材 " + path + "（HTTP " + r.status + "）");
-    return r.arrayBuffer();
+    const buf = await r.arrayBuffer();
+    if (RainAudio._sniff(buf) === "html") {
+      throw new Error("素材 " + path + " 返回的是网页而不是音频。" +
+        "多半是这个文件没被部署（Cloudflare Pages 单文件上限 25 MiB），" +
+        "而站点缺少顶层 404.html，于是回落成了首页。");
+    }
+    return buf;
+  }
+
+  /** 认前几个字节：Ogg / RIFF / ID3 / mp3 帧头 / fLaC / HTML。只用来挡错，不做严格校验。 */
+  static _sniff(buf) {
+    if (!buf || buf.byteLength < 4) return "?";
+    const b = new Uint8Array(buf, 0, 4);
+    if (b[0] === 0x4F && b[1] === 0x67 && b[2] === 0x67 && b[3] === 0x53) return "ogg";   // OggS
+    if (b[0] === 0x66 && b[1] === 0x4C && b[2] === 0x61 && b[3] === 0x43) return "flac";  // fLaC
+    if (b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) return "mp3";                    // ID3
+    if (b[0] === 0xFF && (b[1] & 0xE0) === 0xE0) return "mp3";                            // 裸帧头
+    if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46) return "riff";  // RIFF
+    if (b[0] === 0x3C) return "html";                                                     // '<'
+    return "?";
   }
 
   // 每个 asset 一个 promise，重复请求直接复用

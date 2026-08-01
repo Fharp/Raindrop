@@ -207,7 +207,7 @@ async function settlePlace(a) {
   if (typeof RainPlace === "undefined") { if (caption) caption.reveal(); return; }
   try { place = await RainPlace.resolve(a.roster); } catch (e) { place = null; }
   if (place) {
-    if (caption) caption.setPlace(place.name, place.timezone);
+    if (caption) caption.setPlace(place.name);
     // 已经在放了就不打断，只改左上角
     if (FOLLOW && !a.playing) { try { await pickInCity(a, place.slug); } catch (e) { /* 保留原来那场 */ } }
     if (DEBUG) console.debug("[rain] 城市", place.name, place.source,

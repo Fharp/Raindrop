@@ -33,16 +33,12 @@ function cnSmall(n) {
 
 const pad = n => (n < 10 ? "0" : "") + n;
 
-/** 某时区的此刻，24 小时制。时区名不认识就退回本机时钟。 */
-function clockAt(tz) {
+/** 本机此刻，24 小时制。
+ *  显示的一律是「你自己的表」，不是那座城的当地时间——
+ *  选片本来就按 UTC 钟点对齐，放的是此刻那座城正在下的那场雨，
+ *  所以「巴黎 02:57」读作：你的 02:57，巴黎正在下雨。 */
+function clockNow() {
   const d = new Date();
-  if (tz) {
-    try {
-      return new Intl.DateTimeFormat("en-GB", {
-        timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-      }).format(d);
-    } catch (e) { /* 退回本机 */ }
-  }
   return pad(d.getHours()) + ":" + pad(d.getMinutes());
 }
 
@@ -69,10 +65,10 @@ function attach(o) {
   const root  = o.root, cityEl = o.city, clockEl = o.clock, lineEl = o.line;
   const grab  = typeof o.audio === "function" ? o.audio : () => o.audio;
 
-  let tz = null, shown = "", clockTimer = 0, lineTimer = 0, swapTimer = 0, live = false;
+  let shown = "", clockTimer = 0, lineTimer = 0, swapTimer = 0, live = false;
 
   function paintClock() {
-    clockEl.textContent = clockAt(tz);
+    clockEl.textContent = clockNow();
     // 对齐到下一个整分，而不是每秒空转
     const d = new Date();
     const ms = (60 - d.getSeconds()) * 1000 - d.getMilliseconds();
@@ -110,10 +106,9 @@ function attach(o) {
     },
 
     /** 左上角写哪座城；时钟随之改用该城时区。 */
-    setPlace(name, timezone) {
+    /** 左上角写哪座城。时刻始终是本机时间，与这座城的时区无关。 */
+    setPlace(name) {
       cityEl.textContent = name || "";
-      tz = timezone || null;
-      if (live) paintClock();
       return api;
     },
 
@@ -139,6 +134,6 @@ function attach(o) {
   return api;
 }
 
-global.RainCaption = { attach, cnYear, cnSmall, clockAt, sentenceOf };
+global.RainCaption = { attach, cnYear, cnSmall, clockNow, sentenceOf };
 
 })(typeof window !== "undefined" ? window : globalThis);
