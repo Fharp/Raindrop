@@ -82,7 +82,9 @@ class RainAudio {
           const buf = await r.arrayBuffer();
           if (RainAudio._sniff(buf) === "ogg") { this._fmt = "opus"; return buf; }
         }
-        this._fmt = "orig";
+        // 只有在还没确认过任何一条 opus 时，才判定这个部署根本没有 opus。
+        // 否则一条探空就会把整场会话的探测全关掉，混着放的素材便只剩原始文件。
+        if (this._fmt !== "opus") this._fmt = "orig";
       }
     }
 

@@ -1,7 +1,7 @@
 {
  "profile_version": "1.0.0",
- "generated_at_utc": "2026-07-30T07:50:23+00:00",
- "sound_root": "sound/",
+ "generated_at_utc": "2026-08-01T19:59:22+00:00",
+ "sound_root": "sound",
  "params": {
   "block_s": 0.4,
   "drop_db": 3.0,
@@ -15,67 +15,33 @@
    "missing": false,
    "sample_rate": 44100,
    "channels": 2,
-   "duration_s": 540.238,
-   "lufs_i": -30.5,
-   "lra": 3.2,
-   "peak_dbfs": -0.449262,
+   "duration_s": 107.52,
+   "lufs_i": -30.4,
+   "lra": 3.1,
+   "peak_dbfs": -0.498453,
    "ref_rms_db": -36.48,
    "regions": [
     [
-     11.75,
-     119.45
-    ],
-    [
-     122.15,
-     229.85
-    ],
-    [
-     232.55,
-     340.25
-    ],
-    [
-     342.15,
-     450.65
-    ],
-    [
-     453.35,
-     533.45
+     0.15,
+     107.05
     ]
    ],
    "excluded": [
     [
      0.0,
-     11.75
+     0.15
     ],
     [
-     119.45,
-     122.15
-    ],
-    [
-     229.85,
-     232.55
-    ],
-    [
-     340.25,
-     342.15
-    ],
-    [
-     450.65,
-     453.35
-    ],
-    [
-     533.45,
-     540.238
+     107.05,
+     107.52
     ]
    ],
-   "usable_s": 511.7,
-   "usable_ratio": 0.9472,
-   "blocks": 1351,
-   "longest_region_s": 108.5,
-   "warnings": [
-    "被切成 5 段（中间有明显变弱处，已排除）"
-   ],
-   "trim_db": 0.1
+   "usable_s": 106.9,
+   "usable_ratio": 0.9942,
+   "blocks": 269,
+   "longest_region_s": 106.9,
+   "warnings": [],
+   "trim_db": 0.05
   },
   "rain_light_gusty": {
    "file": "Rain/soundsforyou-calm-rain-ambient-sound-15-min-147850.mp3",
@@ -83,43 +49,33 @@
    "missing": false,
    "sample_rate": 44100,
    "channels": 2,
-   "duration_s": 900.075,
-   "lufs_i": -30.5,
+   "duration_s": 120.007,
+   "lufs_i": -30.4,
    "lra": 2.9,
-   "peak_dbfs": -7.606776,
-   "ref_rms_db": -36.7,
+   "peak_dbfs": -7.687282,
+   "ref_rms_db": -36.65,
    "regions": [
     [
-     1.35,
-     471.05
-    ],
-    [
-     471.75,
-     898.25
+     0.15,
+     119.857
     ]
    ],
    "excluded": [
     [
      0.0,
-     1.35
+     0.15
     ],
     [
-     471.05,
-     471.75
-    ],
-    [
-     898.25,
-     900.075
+     119.857,
+     120.007
     ]
    ],
-   "usable_s": 896.2,
-   "usable_ratio": 0.9957,
-   "blocks": 2251,
-   "longest_region_s": 469.7,
-   "warnings": [
-    "被切成 2 段（中间有明显变弱处，已排除）"
-   ],
-   "trim_db": 0.1
+   "usable_s": 119.71,
+   "usable_ratio": 0.9975,
+   "blocks": 300,
+   "longest_region_s": 119.71,
+   "warnings": [],
+   "trim_db": 0.05
   },
   "rain_mid": {
    "file": "Rain/u_dui2p5vt45-rain-heavy-loud-191411.mp3",
@@ -127,15 +83,15 @@
    "missing": false,
    "sample_rate": 44100,
    "channels": 2,
-   "duration_s": 495.621,
+   "duration_s": 120.007,
    "lufs_i": -26.7,
-   "lra": 3.5,
-   "peak_dbfs": -4.345633,
-   "ref_rms_db": -32.61,
+   "lra": 2.1,
+   "peak_dbfs": -8.762569,
+   "ref_rms_db": -32.53,
    "regions": [
     [
      0.15,
-     495.45
+     119.857
     ]
    ],
    "excluded": [
@@ -144,16 +100,16 @@
      0.15
     ],
     [
-     495.45,
-     495.621
+     119.857,
+     120.007
     ]
    ],
-   "usable_s": 495.3,
-   "usable_ratio": 0.9994,
-   "blocks": 1240,
-   "longest_region_s": 495.3,
+   "usable_s": 119.71,
+   "usable_ratio": 0.9975,
+   "blocks": 300,
+   "longest_region_s": 119.71,
    "warnings": [],
-   "trim_db": -3.7
+   "trim_db": -3.65
   },
   "rain_heavy": {
    "file": "Rain/adsabbhelp-heavy-raining-rain-on-tree-natural-clear-sound-abbas-ali-quiet-life-relaxing-music-11938.mp3",
@@ -161,15 +117,15 @@
    "missing": false,
    "sample_rate": 44100,
    "channels": 2,
-   "duration_s": 862.694,
+   "duration_s": 120.033,
    "lufs_i": -30.3,
    "lra": 0.7,
    "peak_dbfs": -13.584901,
-   "ref_rms_db": -35.73,
+   "ref_rms_db": -35.76,
    "regions": [
     [
      0.15,
-     862.544
+     119.85
     ]
    ],
    "excluded": [
@@ -178,16 +134,16 @@
      0.15
     ],
     [
-     862.544,
-     862.694
+     119.85,
+     120.033
     ]
    ],
-   "usable_s": 862.39,
-   "usable_ratio": 0.9997,
-   "blocks": 2157,
-   "longest_region_s": 862.39,
+   "usable_s": 119.7,
+   "usable_ratio": 0.9972,
+   "blocks": 301,
+   "longest_region_s": 119.7,
    "warnings": [],
-   "trim_db": -0.1
+   "trim_db": -0.05
   },
   "wind_breeze": {
    "file": "Wind/freesound_community-bushes-medium-heavy-wind-in-dry-vegetation-19537.mp3",
@@ -195,39 +151,67 @@
    "missing": false,
    "sample_rate": 24000,
    "channels": 2,
-   "duration_s": 589.152,
-   "lufs_i": -44.8,
-   "lra": 13.5,
-   "peak_dbfs": -12.332696,
-   "ref_rms_db": -51.04,
+   "duration_s": 120.024,
+   "lufs_i": -40.9,
+   "lra": 8.3,
+   "peak_dbfs": -14.526774,
+   "ref_rms_db": -46.09,
+   "regions": [
+    [
+     0.55,
+     6.65
+    ],
+    [
+     16.95,
+     35.45
+    ],
+    [
+     36.15,
+     94.65
+    ]
+   ],
+   "excluded": [
+    [
+     0.0,
+     0.55
+    ],
+    [
+     6.65,
+     16.95
+    ],
+    [
+     35.45,
+     36.15
+    ],
+    [
+     94.65,
+     120.024
+    ]
+   ],
+   "usable_s": 83.1,
+   "usable_ratio": 0.6924,
+   "blocks": 301,
+   "longest_region_s": 58.5,
+   "warnings": [
+    "被切成 3 段（中间有明显变弱处，已排除）"
+   ],
+   "trim_db": 4.55
+  },
+  "wind_strong": {
+   "file": "Wind/restfuldreamingtunes-sounds-of-nature-wind-in-the-desert-262406.mp3",
+   "kind": "wind",
+   "missing": false,
+   "sample_rate": 44100,
+   "channels": 2,
+   "duration_s": 84.741,
+   "lufs_i": -31.8,
+   "lra": 6.7,
+   "peak_dbfs": -16.917976,
+   "ref_rms_db": -34.77,
    "regions": [
     [
      0.15,
-     23.85
-    ],
-    [
-     32.55,
-     39.85
-    ],
-    [
-     45.75,
-     60.65
-    ],
-    [
-     62.55,
-     167.05
-    ],
-    [
-     167.75,
-     377.45
-    ],
-    [
-     378.15,
-     469.05
-    ],
-    [
-     571.35,
-     580.65
+     84.591
     ]
    ],
    "excluded": [
@@ -236,134 +220,16 @@
      0.15
     ],
     [
-     23.85,
-     32.55
-    ],
-    [
-     39.85,
-     45.75
-    ],
-    [
-     60.65,
-     62.55
-    ],
-    [
-     167.05,
-     167.75
-    ],
-    [
-     377.45,
-     378.15
-    ],
-    [
-     469.05,
-     571.35
-    ],
-    [
-     580.65,
-     589.152
+     84.591,
+     84.741
     ]
    ],
-   "usable_s": 460.3,
-   "usable_ratio": 0.7813,
-   "blocks": 1473,
-   "longest_region_s": 209.7,
-   "warnings": [
-    "被切成 7 段（中间有明显变弱处，已排除）"
-   ],
-   "trim_db": 6.4
-  },
-  "wind_strong": {
-   "file": "Wind/restfuldreamingtunes-sounds-of-nature-wind-in-the-desert-262406.mp3",
-   "kind": "wind",
-   "missing": false,
-   "sample_rate": 44100,
-   "channels": 2,
-   "duration_s": 630.335,
-   "lufs_i": -32.0,
-   "lra": 7.0,
-   "peak_dbfs": -16.255605,
-   "ref_rms_db": -34.91,
-   "regions": [
-    [
-     1.35,
-     62.25
-    ],
-    [
-     66.55,
-     152.25
-    ],
-    [
-     156.55,
-     226.25
-    ],
-    [
-     230.55,
-     316.25
-    ],
-    [
-     320.55,
-     390.25
-    ],
-    [
-     394.55,
-     476.65
-    ],
-    [
-     484.55,
-     554.65
-    ],
-    [
-     558.55,
-     627.85
-    ]
-   ],
-   "excluded": [
-    [
-     0.0,
-     1.35
-    ],
-    [
-     62.25,
-     66.55
-    ],
-    [
-     152.25,
-     156.55
-    ],
-    [
-     226.25,
-     230.55
-    ],
-    [
-     316.25,
-     320.55
-    ],
-    [
-     390.25,
-     394.55
-    ],
-    [
-     476.65,
-     484.55
-    ],
-    [
-     554.65,
-     558.55
-    ],
-    [
-     627.85,
-     630.335
-    ]
-   ],
-   "usable_s": 593.2,
-   "usable_ratio": 0.9411,
-   "blocks": 1576,
-   "longest_region_s": 85.7,
-   "warnings": [
-    "被切成 8 段（中间有明显变弱处，已排除）"
-   ],
-   "trim_db": -6.4
+   "usable_s": 84.44,
+   "usable_ratio": 0.9965,
+   "blocks": 212,
+   "longest_region_s": 84.44,
+   "warnings": [],
+   "trim_db": -4.55
   },
   "thunder_far_01": {
    "file": "Thunder/572443__trp__180806-thunder-distant-rolling-boomy-rain-drops-toronto_01.flac",
@@ -535,12 +401,12 @@
   }
  },
  "level_trim_db": {
-  "rain_light_steady": 0.1,
-  "rain_light_gusty": 0.1,
-  "rain_mid": -3.7,
-  "rain_heavy": -0.1,
-  "wind_breeze": 6.4,
-  "wind_strong": -6.4,
+  "rain_light_steady": 0.05,
+  "rain_light_gusty": 0.05,
+  "rain_mid": -3.65,
+  "rain_heavy": -0.05,
+  "wind_breeze": 4.55,
+  "wind_strong": -4.55,
   "thunder_far_01": -9.49,
   "thunder_far_02": -11.34,
   "thunder_near_01": -2.05,
