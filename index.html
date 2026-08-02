@@ -18,16 +18,14 @@
   --serif:"Noto Serif SC","Source Han Serif SC","Source Han Serif CN",
           "Songti SC","SimSun",serif;
   --ink:rgba(255,255,255,.92);
-  --edge:min(6vw,74px);          
+  --edge:min(6vw,74px);
   --top:min(7.5vh,60px);
 }
 
 html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 #view{position:fixed;inset:0;width:100%;height:100%;display:block}
 
-
 #flash{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen}
-
 
 #caption{
   position:fixed;left:var(--edge);top:var(--top);max-width:82vw;
@@ -52,7 +50,7 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 }
 #place:hover::after,#place:focus-visible::after{opacity:1}
 #place:focus-visible{outline:0}
-#caption:not(.on) #place{pointer-events:none}   
+#caption:not(.on) #place{pointer-events:none}
 #clock{
   font-size:.86em;letter-spacing:.07em;opacity:.9;
   font-variant-numeric:tabular-nums lining-nums;
@@ -92,7 +90,6 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 .city:hover,.city:focus-visible{background:rgba(255,255,255,.07);outline:0}
 .city i{width:4px;height:4px;flex:none;border-radius:50%;background:transparent}
 .city.wet i{background:rgba(190,215,255,.85)}
-
 
 #menu{
   position:fixed;right:var(--edge);top:var(--top);z-index:9;
@@ -162,7 +159,6 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   #play.loading{animation:none}
 }
 
-
 #hud{
   position:fixed;right:10px;bottom:10px;width:290px;z-index:5;
   font:12px/1.7 ui-monospace,Consolas,monospace;color:rgba(255,255,255,.85);
@@ -193,7 +189,7 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   <div id="line"></div>
 </div>
 
-
+<!-- 城市下拉。列表由 rain_menu 依名册生成，加城市不用改这里 -->
 <div id="picker" role="listbox" aria-label="城市"><div id="pickerList"></div></div>
 
 <button id="play" class="loading" disabled>聆听</button>
@@ -208,6 +204,7 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   </div>
 </aside>
 
+<!-- raindrop-fx 的预打包文件，见 SPEC-VIEW.md 第 1 节 -->
 <script src="bundle/index.js"></script>
 <script src="rain_eq.js"></script>
 <script src="rain_audio.js"></script>
@@ -226,7 +223,9 @@ const btn = $("#play");
 const DEBUG = !!q.get("debug");
 
 const FOLLOW = q.get("follow") !== "0";
+
 const WX = q.get("wx") !== "0" && typeof RainWeather !== "undefined";
+
 const WATCH_MS = num("watch", 300) * 1000;
 
 let audio = null;
@@ -292,14 +291,11 @@ function nextHourOfDay(hod, h) {
   return null;
 }
 
- * @returns {Promise<{raining:boolean, hours:number|null}>}
- */
 async function evaluateCity(city) {
 
   const bulk = WX ? RainWeather.batchCached() : null;
   const hit  = bulk && bulk.get(city.slug);
   const skipWx = !!(hit && hit.raining);
-
 
   const docP = (async () => {
     try {
@@ -336,6 +332,7 @@ async function applyCity(city, opts) {
   const my = ++applyToken;
   cityNow = city;
   if (picker) picker.setCurrent(city.slug);
+
   if (caption) caption.setExpect(city.slug);
 
   let v;
@@ -363,6 +360,7 @@ async function watch() {
   try { v = await evaluateCity(cityNow); } catch (e) { return; }
 
   if (v.raining === !dryNow) {
+
     if (dryNow && caption) caption.setDry({ name: cityNow.name, hours: v.hours });
     return;
   }
@@ -381,6 +379,7 @@ async function watch() {
 async function pickInCity(a, slug) {
   const was = a.playing;
   if (was) a.stop();
+
   if (!a.cityDoc || a.cityDoc.slug !== slug) await a.loadCity(slug);
   const now  = new Date();
   const cand = (a.cityDoc.hour_of_day && a.cityDoc.hour_of_day[String(now.getUTCHours())]) || [];
@@ -394,9 +393,11 @@ async function pickInCity(a, slug) {
     evId = evs[(Math.random() * evs.length) | 0].event_id;
   }
   await a.loadEvent(evId);
+
   const off = (now.getUTCMinutes() * 60 + now.getUTCSeconds()) / 3600;
   a.cursor  = Math.min(frame + off, Math.max(0, a.score.frames.length - 1e-6));
   if (was) await a.play();
+
   if (caption) caption.refresh();
   if (DEBUG) { fillCities(); fillEvents(); }
 }
@@ -422,6 +423,7 @@ async function onEnd() {
 }
 
 async function settlePlace(a) {
+
   const showMenu = () => $("#menu").classList.add("ready");
   if (typeof RainPlace === "undefined") { if (caption) caption.reveal(); showMenu(); return; }
 
@@ -447,7 +449,6 @@ async function settlePlace(a) {
       .catch(() => {});
   }
 }
-
 
 stage = "预载音频";
 RainAudio.create({
@@ -525,6 +526,7 @@ try {
   fx = window.fx = new RaindropFX({
     canvas,
     background: bg.data,
+
     backgroundBlurSteps: 4,
     mist: true,
     mistBlurStep: 5,
@@ -544,6 +546,7 @@ try {
   bridge = window.bridge = RainBridge.attach(fx, null, $("#flash"));
   bridge.onerror = e => fail(e, "渲染循环");
   await timed(bridge.start(), 30000, "raindrop-fx 初始化");
+
   if (dryNow) bridge.setDry(true);
   ready = true;
   stage = "运行中";
@@ -590,6 +593,7 @@ addEventListener("keydown", e => {
     return;
   }
   if (e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+
   if (e.target && e.target.closest && e.target.closest("#picker,#drawer,#menu,#place")) return;
   if (typeof RainMenu !== "undefined" && RainMenu.anyOpen()) return;
 
