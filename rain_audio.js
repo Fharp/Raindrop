@@ -19,6 +19,7 @@ const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
 
 class RainAudio {
   constructor(opts) {
+    this.ver = "";
     this._packs = new Map();
     this.root        = opts.root || "./";
     this.secPerFrame = opts.secPerFrame || 3600;
@@ -43,7 +44,10 @@ class RainAudio {
   }
 
   async _json(path) {
-    const r = await fetch(this.root + path, { cache: "force-cache" });
+
+    const v = this.ver;
+    const url = this.root + path + (v ? (path.indexOf("?") < 0 ? "?v=" : "&v=") + v : "");
+    const r = await fetch(url, { cache: v ? "force-cache" : "no-cache" });
     if (!r.ok) throw new Error("取不到 " + path + "（HTTP " + r.status + "）");
     const txt = await r.text();
     if (txt.charCodeAt(0) === 0x3C) {
@@ -113,6 +117,8 @@ class RainAudio {
 
   async boot() {
     this.manifest = await this._json("web_out/manifest.json");
+    this.ver = String(this.manifest.built_at_utc || this.manifest.engine_version || "")
+      .replace(/[^0-9A-Za-z]/g, "");
     this.roster   = await this._json("web_out/index/cities.json");
     for (const a of this.manifest.assets) this.assetById.set(a.id, a);
 
