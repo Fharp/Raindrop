@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>雨窗</title>
 <style>
-/* 正文用思源宋体的 Google 版本（Noto Serif SC）。OFL 1.1，无保留字体名，
-   可商用、可自行子集化后不改名。子集由 make_font_subset.py 依名册生成，
-   放在 fonts/ 下；取不到时下面的栈会退到系统里的宋体。 */
+
 @font-face{
   font-family:"Noto Serif SC";
   src:url("fonts/NotoSerifSC-rain.woff2") format("woff2");
@@ -20,17 +18,17 @@
   --serif:"Noto Serif SC","Source Han Serif SC","Source Han Serif CN",
           "Songti SC","SimSun",serif;
   --ink:rgba(255,255,255,.92);
-  --edge:min(6vw,74px);          /* 左右两侧的统一边距：文字层与菜单键共用 */
+  --edge:min(6vw,74px);          
   --top:min(7.5vh,60px);
 }
 
 html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 #view{position:fixed;inset:0;width:100%;height:100%;display:block}
 
-/* 闪电：整屏一层，亮点位置跟着雷的 pan 走 */
+
 #flash{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen}
 
-/* ── 文字层。两行都不承担任何状态提示，只说此地此刻与正在放的那场雨。 */
+
 #caption{
   position:fixed;left:var(--edge);top:var(--top);max-width:82vw;
   z-index:2;pointer-events:none;user-select:none;
@@ -43,8 +41,7 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   display:flex;align-items:baseline;gap:.62em;
   font-size:clamp(30px,3.7vw,54px);line-height:1.18;letter-spacing:.18em;
 }
-/* 城市名现在是个开关：点开是城市下拉。悬停时底下压一条细线，
-   右端收 .18em，抵掉字距在末字后面留的那一格。 */
+
 #place{
   position:relative;margin-right:-.18em;
   pointer-events:auto;cursor:pointer;
@@ -55,7 +52,7 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 }
 #place:hover::after,#place:focus-visible::after{opacity:1}
 #place:focus-visible{outline:0}
-#caption:not(.on) #place{pointer-events:none}   /* 还没露面就不该能点 */
+#caption:not(.on) #place{pointer-events:none}   
 #clock{
   font-size:.86em;letter-spacing:.07em;opacity:.9;
   font-variant-numeric:tabular-nums lining-nums;
@@ -66,7 +63,6 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   transition:opacity .45s ease;
 }
 
-/* ── 城市下拉。位置由 rain_menu 按 #place 的实际盒子算，不写死偏移。 */
 #picker{
   position:fixed;left:0;top:0;z-index:6;box-sizing:border-box;
   width:min(560px,86vw);max-height:min(58vh,460px);
@@ -80,9 +76,7 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 }
 #picker.on{opacity:1;transform:none;pointer-events:auto}
 #pickerList{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.4em,1fr));gap:2px}
-/* 顺序有讲究：.wet/.dry 与 :hover 同为 (0,2,0)，靠书写顺序定胜负，
-   hover 必须写在最后，否则没在下雨的那些城悬停时不会亮起来。
-   天气问不到时两个类都不加，一律用中间那档亮度——不猜，也不写状态字。 */
+
 .city{
   display:flex;align-items:center;gap:.5em;
   padding:.42em .5em;border:0;background:none;cursor:pointer;text-align:left;
@@ -91,15 +85,15 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   color:var(--ink);opacity:.82;
   transition:opacity .18s,background-color .18s;
 }
-.city.wet{opacity:.95}                                 /* 此刻在下雨 */
-.city.dry{opacity:.5}                                  /* 此刻没在下雨，照样能选 */
+.city.wet{opacity:.95}
+.city.dry{opacity:.5}
 .city.now{box-shadow:inset 0 0 0 1px rgba(255,255,255,.26)}
 .city:hover,.city:focus-visible,.city.now{opacity:1}
 .city:hover,.city:focus-visible{background:rgba(255,255,255,.07);outline:0}
 .city i{width:4px;height:4px;flex:none;border-radius:50%;background:transparent}
 .city.wet i{background:rgba(190,215,255,.85)}
 
-/* ── 右上角三条横线，与左上角文字同一条水平线起算。 */
+
 #menu{
   position:fixed;right:var(--edge);top:var(--top);z-index:9;
   width:26px;height:26px;padding:0;margin:0;border:0;background:none;cursor:pointer;
@@ -138,10 +132,9 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 }
 #drawer.on{transform:none}
 
-/* 唯一的控件：示意图里那个方框。它自己就是播放键，不再有圆钮。 */
 #play{
   position:fixed;left:50%;top:62%;transform:translate(-50%,-50%);z-index:3;
-  padding:.72em 1.72em .72em 2.28em;   /* 左右差 .56em：抵掉末字后面那一格，字才真在框中间 */
+  padding:.72em 1.72em .72em 2.28em;
   border-radius:0;
   border:1px solid rgba(255,255,255,.55);
   background:rgba(8,12,14,.3);color:rgba(255,255,255,.92);
@@ -157,9 +150,9 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   border-color:rgba(255,255,255,.85);background:rgba(8,12,14,.5);color:#fff;
 }
 #play:disabled{cursor:default}
-/* 消失比出现慢：收起来要不着痕迹，唤回来要跟得上手 */
+
 #play.hidden{opacity:0;pointer-events:none;transition:opacity .9s}
-/* 载入中：不写字，只让方框自己呼吸 */
+
 #play.loading{animation:breathe 2.2s ease-in-out infinite}
 @keyframes breathe{0%,100%{opacity:.85}50%{opacity:.3}}
 #play:focus-visible{outline:1px solid rgba(255,255,255,.75);outline-offset:6px}
@@ -169,7 +162,7 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   #play.loading{animation:none}
 }
 
-/* 调试面板挪到右下：右上角现在归菜单键 */
+
 #hud{
   position:fixed;right:10px;bottom:10px;width:290px;z-index:5;
   font:12px/1.7 ui-monospace,Consolas,monospace;color:rgba(255,255,255,.85);
@@ -200,7 +193,7 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   <div id="line"></div>
 </div>
 
-<!-- 城市下拉。列表由 rain_menu 依名册生成，加城市不用改这里 -->
+
 <div id="picker" role="listbox" aria-label="城市"><div id="pickerList"></div></div>
 
 <button id="play" class="loading" disabled>聆听</button>
@@ -215,7 +208,6 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   </div>
 </aside>
 
-<!-- raindrop-fx 的预打包文件，见 SPEC-VIEW.md 第 1 节 -->
 <script src="bundle/index.js"></script>
 <script src="rain_eq.js"></script>
 <script src="rain_audio.js"></script>
@@ -233,28 +225,16 @@ const $   = s => document.querySelector(s);
 const btn = $("#play");
 const DEBUG = !!q.get("debug");
 
-// 左上角那座城决定放谁的雨。?follow=0 关掉：城市只表示「你在哪」，
-// 放哪一场仍按 UTC 钟点全局随机。
 const FOLLOW = q.get("follow") !== "0";
-// ?wx=0 关掉天气判据：任何城任何时候都当成在下雨，回到没有干燥态之前的行为。
 const WX = q.get("wx") !== "0" && typeof RainWeather !== "undefined";
-// 干燥态下多久回头看一眼天气
 const WATCH_MS = num("watch", 300) * 1000;
 
-// ── 前置声明。
-//    下面这些都会被「定位回来」那条异步链读到，而那条链最早可以在
-//    `await loadBackground()` 让出的那一刻插进来执行。let / const 的暂时性死区
-//    不认执行顺序只认书写位置，声明写在后面就会炸成
-//    can't access lexical declaration 'x' before initialization——
-//    表现是整页全黑、没有任何提示。所以凡是跨异步边界被用到的，一律提到这里。
 let audio = null;
 let fx = null, bridge = null, ready = false;
 let hud = null, seeking = false;
 let idleTimer = 0;
 const IDLE_MS = 2600;
 
-// ── 失败必须看得见。这一版所有 await 都带超时，绝不允许再出现
-//    「一片黑、没有任何提示」的状态。
 let stage = "启动";
 function fail(e, where) {
   let pre = $("#err");
@@ -272,8 +252,6 @@ function timed(p, ms, what) {
   ]);
 }
 
-// ── 文字层。时钟一上来就走；整块要等城市与字体到位才淡入，
-//    中途不写任何占位字。
 const caption = (typeof RainCaption !== "undefined") ? RainCaption.attach({
   root:  $("#caption"),
   city:  $("#place"),
@@ -282,8 +260,6 @@ const caption = (typeof RainCaption !== "undefined") ? RainCaption.attach({
   audio: () => audio,
 }).start() : null;
 
-// ── 画布。默认 dpr 压到 1：画面本来就蒙着一层雾，锐度没用；
-//    省下来的填充率换成更多水珠，那才是「一直在下」的观感来源。?dpr=1.5 可提高。
 const canvas = $("#view");
 const dpr = Math.min(window.devicePixelRatio || 1, num("dpr", 1));
 const fit = () => {
@@ -292,15 +268,12 @@ const fit = () => {
 };
 fit();
 
-// ═══════════════════════════════ 城市与「在不在下雨」
-
-let cityNow   = null;    // 当前这座城 {slug, name, lat, lon}
-let placeKnown = false;  // 定位成功、或用户自己选过 → 左上角写城市名，否则写「地球某处」
-let dryNow    = false;   // 那座城此刻没在下雨
-let wantSound = false;   // 用户按过聆听。雨重新下起来时据此决定要不要自己续上
+let cityNow   = null;
+let placeKnown = false;
+let dryNow    = false;
+let wantSound = false;
 let picker = null, drawer = null;
 
-/** 名册里那一项 → 本页面用的紧凑形状 */
 function shape(c) {
   if (!c) return null;
   const co = c.coordinates || {};
@@ -311,7 +284,6 @@ function shape(c) {
   };
 }
 
-/** 钟点索引里，往后数第几个钟点才又有候选。全空返回 null。 */
 function nextHourOfDay(hod, h) {
   for (let k = 1; k <= 24; k++) {
     const v = hod[String((h + k) % 24)];
@@ -320,24 +292,15 @@ function nextHourOfDay(hod, h) {
   return null;
 }
 
-/** 这座城此刻算不算在下雨。两个判据，任一说「没有」就算没有：
- *
- *   数据侧  这个 UTC 钟点在该城的钟点索引里有没有候选场次。
- *           没有＝手上根本没有这一刻的雨可放。
- *   天气侧  Open-Meteo 的 current，阈值同 manifest 的 0.3 mm/h。
- *
- * 天气问不到（ok 为 false）时**不算作没下雨**——断网时把窗户擦干是最糟的表现。
  * @returns {Promise<{raining:boolean, hours:number|null}>}
  */
 async function evaluateCity(city) {
-  // 页面一起手就为下拉菜单打过一发批量 current，57 座城的结果都在里面。
-  // 它说这座城在下雨，就不必再为它单独问一次逐时预报——那份预报只在
-  // 「没在下雨」时才有用（要拿它算小时数）。换城的等待因此少掉一整个网络往返。
+
   const bulk = WX ? RainWeather.batchCached() : null;
   const hit  = bulk && bulk.get(city.slug);
   const skipWx = !!(hit && hit.raining);
 
-  // 城市索引与天气并发。串起来问的话，慢的那一头会把快的那一头也拖住。
+
   const docP = (async () => {
     try {
       if (!audio.cityDoc || audio.cityDoc.slug !== city.slug) await audio.loadCity(city.slug);
@@ -345,7 +308,7 @@ async function evaluateCity(city) {
       const h = new Date().getUTCHours();
       const has = !!((hod[String(h)] || []).length);
       return { hasHour: has, dataHours: has ? null : nextHourOfDay(hod, h) };
-    } catch (e) { return { hasHour: true, dataHours: null }; }   // 索引取不到，交给天气侧判
+    } catch (e) { return { hasHour: true, dataHours: null }; }
   })();
 
   const wxP = (WX && !skipWx)
@@ -359,7 +322,6 @@ async function evaluateCity(city) {
   return { raining: true, hours: null };
 }
 
-/** 进／出干燥态。画面、文字、播放键三处一起改，别处不许各改各的。 */
 function setDry(on, name, hours) {
   dryNow = !!on;
   if (bridge) bridge.setDry(dryNow);
@@ -369,15 +331,11 @@ function setDry(on, name, hours) {
 
 let applyToken = 0;
 
-/** 换到某座城：判定 → 要么起雨，要么进干燥态。
- *  期间用户又切了城的话，旧的这一次判定结果直接丢掉。 */
 async function applyCity(city, opts) {
   opts = opts || {};
   const my = ++applyToken;
   cityNow = city;
   if (picker) picker.setCurrent(city.slug);
-  // 先宣告：从这一刻起第二行不再说上一座城。谱到位之前它是空的，
-  // 而不是继续挂着一句已经不成立的话。
   if (caption) caption.setExpect(city.slug);
 
   let v;
@@ -398,16 +356,13 @@ async function applyCity(city, opts) {
   }
 }
 
-/** 回头看一眼：雨停没停、或者停了之后有没有重新下起来。
- *  只在状态真的翻转时才动播放器，否则每隔几分钟就会把正在放的那场雨打断。 */
 async function watch() {
   if (!audio || !cityNow || !FOLLOW) return;
-  if (WX) RainWeather.forget(cityNow.slug);      // 缓存作废，才问得到新的
+  if (WX) RainWeather.forget(cityNow.slug);
   let v;
   try { v = await evaluateCity(cityNow); } catch (e) { return; }
 
   if (v.raining === !dryNow) {
-    // 状态没翻。干燥态里顺手把小时数更新一下，别让那行字一直停在旧数上
     if (dryNow && caption) caption.setDry({ name: cityNow.name, hours: v.hours });
     return;
   }
@@ -423,13 +378,9 @@ async function watch() {
   }
 }
 
-// ── 选片：限定城市，仍按 SPEC 第 3 节的「城市随机」口径——
-//    UTC 钟点对齐，该城此刻没下过雨就退回该城任意一场。
 async function pickInCity(a, slug) {
   const was = a.playing;
-  if (was) a.stop();                    // 先停：否则 loadEvent 会自己抢着重启一次
-  // evaluateCity 多半刚拉过同一份索引，不要再拉一次——单城索引 26–190 KB，
-  // 白等一个往返，第二行就多空那么久。
+  if (was) a.stop();
   if (!a.cityDoc || a.cityDoc.slug !== slug) await a.loadCity(slug);
   const now  = new Date();
   const cand = (a.cityDoc.hour_of_day && a.cityDoc.hour_of_day[String(now.getUTCHours())]) || [];
@@ -443,20 +394,17 @@ async function pickInCity(a, slug) {
     evId = evs[(Math.random() * evs.length) | 0].event_id;
   }
   await a.loadEvent(evId);
-  // 切入点与 SPEC 第 3 节一致：帧起点 + 当前 UTC 的分秒，播满一小时正好跨帧
   const off = (now.getUTCMinutes() * 60 + now.getUTCSeconds()) / 3600;
   a.cursor  = Math.min(frame + off, Math.max(0, a.score.frames.length - 1e-6));
   if (was) await a.play();
-  // 谱已经换好，立刻重画一次，不必干等下一次 2 秒轮询
   if (caption) caption.refresh();
   if (DEBUG) { fillCities(); fillEvents(); }
 }
 
-/** 一场雨放完了。不再无条件换下一场——先看这座城是不是还在下。 */
 async function onEnd() {
   if (!audio) return;
   if (!FOLLOW || !cityNow) {
-    if (caption) caption.setExpect(null);      // 不跟随城市，谁的谱都算数
+    if (caption) caption.setExpect(null);
     try { await audio.pickRandom(); await audio.play(); if (caption) caption.refresh(); }
     catch (e) { fail(e, "换场"); }
     return;
@@ -473,16 +421,13 @@ async function onEnd() {
   }
 }
 
-// 定位单独走，不挡起播：用户可能在权限弹窗还开着的时候就想按播放。
 async function settlePlace(a) {
-  // 菜单键跟定位、跟音频都没关系，任何一条链断了它都必须还能点开
   const showMenu = () => $("#menu").classList.add("ready");
   if (typeof RainPlace === "undefined") { if (caption) caption.reveal(); showMenu(); return; }
 
   let p = null;
   try { p = await RainPlace.resolve(a.roster); } catch (e) { p = null; }
 
-  // 只有真的定到位才写城市名。第二、三档是「随便给你一座」，不算知道你在哪。
   placeKnown = !!(p && p.source === "geolocation");
   if (caption) caption.setPlace(placeKnown ? p.name : null);
 
@@ -496,7 +441,6 @@ async function settlePlace(a) {
   if (caption) caption.reveal();
   showMenu();
 
-  // 下拉里那些小点：批量天气回来之后补上。取不到就一个点都不画。
   if (WX) {
     RainWeather.batch(RainPlace.list(a.roster))
       .then(() => { if (picker) picker.refresh(); })
@@ -504,23 +448,22 @@ async function settlePlace(a) {
   }
 }
 
-// ── 音频先起飞，且与画面互不牵连：画面挂了也照样能听。
+
 stage = "预载音频";
 RainAudio.create({
   root: "./",
-  secPerFrame: num("sec", 3600),        // ?sec=30 压缩倍速，用来快速看一场雨的全程
+  secPerFrame: num("sec", 3600),
   volume: num("vol", 0.7),
 }).then(a => {
   audio = window.audio = a;
   a.onend = () => onEnd();
 
-  // 城市下拉：名册一到手就能建，不等定位
   if (typeof RainMenu !== "undefined") {
     picker = RainMenu.attachCityPicker({
       button: $("#place"), panel: $("#picker"), list: $("#pickerList"),
       roster: a.roster,
       onPick: c => {
-        placeKnown = true;                       // 自己选的，当然知道是哪
+        placeKnown = true;
         if (caption) caption.setPlace(c.name);
         applyCity(shape(c), { play: true });
       },
@@ -536,32 +479,18 @@ RainAudio.create({
   if (DEBUG) { fillCities(); fillEvents(); }
 }).catch(e => { fail(e, "预载音频"); $("#menu").classList.add("ready"); });
 
-// 右侧抽屉与定位、音频都没关系，一起手就能开
 if (typeof RainMenu !== "undefined") {
   drawer = RainMenu.attachDrawer({ button: $("#menu"), panel: $("#drawer"), scrim: $("#scrim") });
 }
 
-// 干燥态要能自己等到雨来；回到前台也立刻看一眼（挂机一整夜的情形）
 setInterval(() => { if (!document.hidden) watch(); }, Math.max(60000, WATCH_MS));
 document.addEventListener("visibilitychange", () => { if (!document.hidden) watch(); });
 
-// ── 视觉层
 if (typeof RaindropFX === "undefined") {
   fail(new Error("bundle/index.js 没加载。到 github.com/SardineFish/raindrop-fx 取 bundle/index.js 放进 bundle/。"), "加载 raindrop-fx");
   return;
 }
 
-/* 底图自己load。
- *
- * 不能交给库：它的 zogra-renderer 里是这么写的——
- *     url(u) { const buffer = await fetch(u).then(r => r.arrayBuffer()); … }
- * 没有检查 r.ok，404 返回的错误页正文照样被当成图片字节；再往下
- *     if (img.complete) complete(); else img.onload = complete;
- * 只挂了 onload，**没有 onerror**。于是图片解不出来时那个 Promise
- * 永远不会 settle：loadAssets() 挂死、start() 不返回、后面的代码一行不跑，
- * 屏幕全黑且没有任何报错。这正是上一版卡住的形态。
- * 这里自己 fetch、自己查状态码、自己解码，再把解好的位图直接交给库
- * （background 接受 TextureData，不一定要是 URL 字符串）。 */
 async function loadBackground(cands) {
   const tried = [];
   for (const url of cands) {
@@ -595,12 +524,11 @@ try {
   stage = "建 WebGL2 上下文";
   fx = window.fx = new RaindropFX({
     canvas,
-    background: bg.data,                   // 已解码的位图，不走库的 URL 加载
-    // 起手参数只定量级；逐帧的值由 rain_bridge 覆写
+    background: bg.data,
     backgroundBlurSteps: 4,
     mist: true,
     mistBlurStep: 5,
-    mistColor: [0.035, 0.042, 0.05, 1],    // 雾偏冷，配底图的青调
+    mistColor: [0.035, 0.042, 0.05, 1],
     refractBase: 0.42,
     refractScale: 0.62,
     raindropCompose: "smoother",
@@ -616,7 +544,6 @@ try {
   bridge = window.bridge = RainBridge.attach(fx, null, $("#flash"));
   bridge.onerror = e => fail(e, "渲染循环");
   await timed(bridge.start(), 30000, "raindrop-fx 初始化");
-  // 画面比定位晚到时，把已经定下来的干燥态补给它
   if (dryNow) bridge.setDry(true);
   ready = true;
   stage = "运行中";
@@ -629,10 +556,6 @@ addEventListener("resize", () => {
   if (ready) { try { fx.resize(canvas.width, canvas.height); } catch (e) { fail(e, "改变窗口尺寸"); } }
 });
 
-// ── 方框。没在放时常驻，写「聆听」；放起来之后收走，
-//    有任何动作再露一下，此时写「静音」——按下去实际是暂停。
-//    干燥态下整个收起来：窗外没在下雨，就没有雨可听。
-
 function showBox(auto) {
   if (dryNow) { hideBox(); return; }
   btn.textContent = (audio && audio.playing) ? "静音" : "聆听";
@@ -642,11 +565,10 @@ function showBox(auto) {
 }
 function hideBox() { clearTimeout(idleTimer); btn.classList.add("hidden"); }
 
-// 收起来的时候不改字，免得淡出过程中被看见换字；下次露面时才写对。
 for (const ev of ["pointermove", "pointerdown", "wheel", "touchstart", "keydown"]) {
   addEventListener(ev, () => { if (audio && audio.playing) showBox(true); }, { passive: true });
 }
-// 鼠标停在框上就别收，哪怕它一动不动
+
 btn.addEventListener("pointerenter", () => clearTimeout(idleTimer));
 btn.addEventListener("pointerleave", () => { if (audio && audio.playing) showBox(true); });
 
@@ -655,15 +577,12 @@ btn.addEventListener("click", async () => {
   try {
     if (audio.playing) { audio.stop(); wantSound = false; showBox(false); return; }
     await audio.play();
-    wantSound = true;                    // 之后雨自己重新下起来时据此续上
+    wantSound = true;
     if (bridge) bridge.audio = audio;
     hideBox();
   } catch (e) { fail(e, "起播"); }
 });
 
-// ── 快捷键
-//   空格 播放/停止   D 换一场雨   [ ] 上一场/下一场   ←/→ 快退快进 6 分钟
-//   0–9 空转时的雨强   Esc 关掉浮层
 addEventListener("keydown", e => {
   if (e.key === "Escape") {
     if (picker) picker.hide();
@@ -671,11 +590,9 @@ addEventListener("keydown", e => {
     return;
   }
   if (e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
-  // 焦点在浮层里、或浮层开着的时候，这些键都让路
   if (e.target && e.target.closest && e.target.closest("#picker,#drawer,#menu,#place")) return;
   if (typeof RainMenu !== "undefined" && RainMenu.anyOpen()) return;
 
-  // 方框自己有焦点时，空格由浏览器原生触发一次 click，这里不能再补一次
   if (e.key === " ") { if (e.target === btn || dryNow) return; btn.click(); }
   else if ((e.key === "d" || e.key === "D") && audio && !dryNow) {
     (FOLLOW && cityNow ? pickInCity(audio, cityNow.slug) : audio.pickRandom())
@@ -698,11 +615,9 @@ function stepEvent(d) {
   if (next) audio.loadEvent(next.event_id).then(fillEvents).catch(e => fail(e, "切场次"));
 }
 
-// 控制台里手动摆弄用
 window.rain = { evaluateCity, applyCity, watch, setDry, shape,
                 get city() { return cityNow; }, get dry() { return dryNow; } };
 
-// ── ?debug=1：城市 / 场次 / 进度条 / 读数。正式页面没有它。
 function fillCities() {
   if (!hud || !audio || !audio.roster) return;
   const sel = $("#hCity");
