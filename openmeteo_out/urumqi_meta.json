@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-07-28T16:15:58.171098+00:00",
+  "fetched_at_utc": "2026-08-02T15:33:07.578432+00:00",
   "city": {
     "slug": "urumqi",
     "name": "乌鲁木齐",
@@ -18,11 +18,11 @@
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
     "start": "2025-10-01",
-    "end": "2026-07-01"
+    "end": "2026-08-01"
   },
   "index_range_utc": {
     "start": "2025-10-08T12:00",
-    "end": "2026-07-01T23:00"
+    "end": "2026-08-01T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,21 +80,21 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 6396,
-    "audible_hours": 88,
-    "audible_ratio": 0.0138,
-    "liquid_p50": 0.8,
-    "liquid_p85": 1.4599999999999993,
-    "liquid_p97": 2.7319999999999993,
-    "liquid_max": 4.0,
-    "events": 26,
+    "hours": 7140,
+    "audible_hours": 110,
+    "audible_ratio": 0.0154,
+    "liquid_p50": 0.7,
+    "liquid_p85": 1.7,
+    "liquid_p97": 4.0,
+    "liquid_max": 8.0,
+    "events": 33,
     "event_hours_max": 12,
     "event_hours_median": 3.0,
     "gap_max": 2173,
-    "cin_missing_hours": 3504,
+    "cin_missing_hours": 3513,
     "weather_code_thunder_hours": 0,
-    "thunder_score_p90": 0.06420000000000009,
-    "thunder_score_p99": 0.20704499999999995,
+    "thunder_score_p90": 0.061,
+    "thunder_score_p99": 0.203625,
     "thunder_score_max": 0.225
   },
   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."

@@ -5,7 +5,8 @@
 const CFG = {
   api:         "https://api.open-meteo.com/v1/forecast",
   floorMmH:    0.3,
-  horizonDays: 3,
+
+  horizonHours: 96,
   batchTtlMs:  600000,
   cityTtlMs:   900000,
   timeoutMs:   6000,
@@ -93,7 +94,7 @@ async function city(c) {
       "&longitude=" + c.lon.toFixed(4) +
       "&current=rain,showers,precipitation" +
       "&hourly=rain,showers,precipitation" +
-      "&forecast_days=" + CFG.horizonDays +
+      "&forecast_hours=" + CFG.horizonHours +
       "&timeformat=unixtime");
 
     const cur = pick(b, "current"), hr = pick(b, "hourly");

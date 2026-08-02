@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-07-28T16:18:42.401317+00:00",
+  "fetched_at_utc": "2026-08-02T15:39:52.473157+00:00",
   "city": {
     "slug": "losangeles",
     "name": "洛杉矶",
@@ -18,11 +18,11 @@
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
     "start": "2025-10-01",
-    "end": "2026-07-01"
+    "end": "2026-08-01"
   },
   "index_range_utc": {
     "start": "2025-10-08T12:00",
-    "end": "2026-07-01T23:00"
+    "end": "2026-08-01T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,18 +80,18 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 6396,
-    "audible_hours": 273,
-    "audible_ratio": 0.0427,
+    "hours": 7140,
+    "audible_hours": 275,
+    "audible_ratio": 0.0385,
     "liquid_p50": 1.4,
-    "liquid_p85": 4.219999999999999,
+    "liquid_p85": 4.2,
     "liquid_p97": 6.4,
     "liquid_max": 13.8,
-    "events": 49,
+    "events": 51,
     "event_hours_max": 31,
-    "event_hours_median": 4.0,
+    "event_hours_median": 3.0,
     "gap_max": 964,
-    "cin_missing_hours": 2312,
+    "cin_missing_hours": 2858,
     "weather_code_thunder_hours": 1,
     "thunder_score_p90": 0.06417000000000003,
     "thunder_score_p99": 0.20419999999999988,

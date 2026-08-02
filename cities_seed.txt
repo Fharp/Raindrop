@@ -1,0 +1,438 @@
+# 城市名单种子。一行一座城，交给 make_cities.py 去 Open-Meteo 地理编码解析坐标。
+#   Mumbai            按名字搜
+#   Cologne, DE       逗号后跟 ISO 国家码，用来消歧
+#   Kochi, IN = 科钦   等号后手工指定中文名（接口给不出好中文名时用）
+# 已经在跑的那 57 座城不写在这里，make_cities.py 会原样保留。
+#
+# 排序逻辑不是人口，是雨。这个站点靠雨的场次撑内容，
+# 一座常年不下雨的大城贡献的场次可能还不如一座多雨小城。
+# 所以「多雨」那一段建议优先跑，人口段可以按需截断。
+
+# ── 多雨优先。这些地方的年降水时数远高于平均，一座顶三座
+Bergen, NO
+Stavanger, NO
+Tórshavn, FO
+Reykjavik, IS
+Galway, IE
+Cork, IE
+Fort William, GB
+Hilo, US
+Ketchikan, US
+Sitka, US
+Prince Rupert, CA
+Tofino, CA
+Quibdo, CO
+Buenaventura, CO
+Bogor, ID
+Padang, ID
+Manado, ID
+Kuching, MY
+Kota Kinabalu, MY
+Bandar Seri Begawan, BN
+Baguio, PH
+Legazpi, PH
+Kochi, IN
+Mangalore, IN
+Shillong, IN
+Agartala, IN
+Chittagong, BD
+Sylhet, BD
+Yakushima, JP
+Owase, JP
+Kanazawa, JP
+Niigata, JP
+Kagoshima, JP
+Naha, JP
+Milford Sound, NZ
+Hokitika, NZ
+Greymouth, NZ
+Suva, FJ
+Apia, WS
+Pohnpei, FM
+Douala, CM
+Monrovia, LR
+Freetown, SL
+Conakry, GN
+Cayenne, GF
+Manaus, BR
+Belem, BR
+Iquitos, PE
+Puerto Montt, CL
+Valdivia, CL
+Ushuaia, AR
+
+# ── 东亚 / 东南亚
+Seoul, KR
+Busan, KR
+Incheon, KR
+Jeju, KR
+Osaka, JP
+Kyoto, JP
+Nagoya, JP
+Sapporo, JP
+Fukuoka, JP
+Sendai, JP
+Hiroshima, JP
+Yokohama, JP
+Kaohsiung, TW
+Taichung, TW
+Tainan, TW
+Hualien, TW
+Ulaanbaatar, MN
+Pyongyang, KP
+Bangkok, TH
+Chiang Mai, TH
+Phuket, TH
+Hanoi, VN
+Ho Chi Minh City, VN
+Da Nang, VN
+Hue, VN
+Phnom Penh, KH
+Vientiane, LA
+Yangon, MM
+Mandalay, MM
+Kuala Lumpur, MY
+Penang, MY
+Jakarta, ID
+Surabaya, ID
+Bandung, ID
+Denpasar, ID
+Medan, ID
+Makassar, ID
+Manila, PH
+Cebu, PH
+Davao, PH
+Dili, TL
+
+# ── 南亚 / 中亚 / 西亚
+Mumbai, IN
+Delhi, IN
+Bengaluru, IN
+Chennai, IN
+Kolkata, IN
+Hyderabad, IN
+Pune, IN
+Ahmedabad, IN
+Jaipur, IN
+Lucknow, IN
+Varanasi, IN
+Goa, IN
+Colombo, LK
+Kandy, LK
+Male, MV
+Dhaka, BD
+Kathmandu, NP
+Thimphu, BT
+Karachi, PK
+Lahore, PK
+Islamabad, PK
+Kabul, AF
+Tashkent, UZ
+Samarkand, UZ
+Almaty, KZ
+Astana, KZ
+Bishkek, KG
+Dushanbe, TJ
+Ashgabat, TM
+Tehran, IR
+Isfahan, IR
+Baku, AZ
+Tbilisi, GE
+Yerevan, AM
+Istanbul, TR
+Ankara, TR
+Izmir, TR
+Trabzon, TR
+Beirut, LB
+Damascus, SY
+Amman, JO
+Jerusalem, IL
+Tel Aviv, IL
+Baghdad, IQ
+Erbil, IQ
+Kuwait City, KW
+Riyadh, SA
+Jeddah, SA
+Doha, QA
+Dubai, AE
+Abu Dhabi, AE
+Muscat, OM
+Manama, BH
+Sanaa, YE
+
+# ── 欧洲
+Dublin, IE
+Edinburgh, GB
+Glasgow, GB
+Manchester, GB
+Liverpool, GB
+Birmingham, GB
+Bristol, GB
+Cardiff, GB
+Belfast, GB
+Amsterdam, NL
+Rotterdam, NL
+Brussels, BE
+Antwerp, BE
+Luxembourg, LU
+Berlin, DE
+Hamburg, DE
+Munich, DE
+Cologne, DE
+Frankfurt, DE
+Dresden, DE
+Vienna, AT
+Salzburg, AT
+Zurich, CH
+Geneva, CH
+Bern, CH
+Copenhagen, DK
+Aarhus, DK
+Oslo, NO
+Tromso, NO
+Stockholm, SE
+Gothenburg, SE
+Malmo, SE
+Kiruna, SE
+Helsinki, FI
+Tampere, FI
+Rovaniemi, FI
+Tallinn, EE
+Riga, LV
+Vilnius, LT
+Warsaw, PL
+Krakow, PL
+Gdansk, PL
+Prague, CZ
+Brno, CZ
+Bratislava, SK
+Budapest, HU
+Ljubljana, SI
+Zagreb, HR
+Split, HR
+Sarajevo, BA
+Belgrade, RS
+Podgorica, ME
+Skopje, MK
+Tirana, AL
+Sofia, BG
+Bucharest, RO
+Chisinau, MD
+Kyiv, UA
+Lviv, UA
+Odesa, UA
+Minsk, BY
+Moscow, RU
+Saint Petersburg, RU
+Kazan, RU
+Novosibirsk, RU
+Vladivostok, RU
+Irkutsk, RU
+Murmansk, RU
+Yakutsk, RU
+Athens, GR
+Thessaloniki, GR
+Nicosia, CY
+Rome, IT
+Milan, IT
+Naples, IT
+Venice, IT
+Florence, IT
+Palermo, IT
+Bologna, IT
+Madrid, ES
+Barcelona, ES
+Valencia, ES
+Seville, ES
+Bilbao, ES
+Santiago de Compostela, ES
+Palma, ES
+Las Palmas, ES
+Lisbon, PT
+Porto, PT
+Funchal, PT
+Ponta Delgada, PT
+Marseille, FR
+Lyon, FR
+Toulouse, FR
+Bordeaux, FR
+Nice, FR
+Strasbourg, FR
+Brest, FR
+Reykjanesbaer, IS
+
+# ── 非洲
+Cairo, EG
+Alexandria, EG
+Tunis, TN
+Algiers, DZ
+Casablanca, MA
+Marrakesh, MA
+Rabat, MA
+Dakar, SN
+Bamako, ML
+Ouagadougou, BF
+Abidjan, CI
+Accra, GH
+Lome, TG
+Cotonou, BJ
+Lagos, NG
+Abuja, NG
+Port Harcourt, NG
+Yaounde, CM
+Libreville, GA
+Brazzaville, CG
+Kinshasa, CD
+Luanda, AO
+Windhoek, NA
+Gaborone, BW
+Johannesburg, ZA
+Cape Town, ZA
+Durban, ZA
+Port Elizabeth, ZA
+Maputo, MZ
+Harare, ZW
+Lusaka, ZM
+Lilongwe, MW
+Dar es Salaam, TZ
+Zanzibar, TZ
+Nairobi, KE
+Mombasa, KE
+Kampala, UG
+Kigali, RW
+Bujumbura, BI
+Addis Ababa, ET
+Asmara, ER
+Djibouti, DJ
+Mogadishu, SO
+Khartoum, SD
+Antananarivo, MG
+Port Louis, MU
+Victoria, SC
+Saint-Denis, RE
+
+# ── 北美
+Toronto, CA
+Montreal, CA
+Vancouver, CA
+Ottawa, CA
+Calgary, CA
+Edmonton, CA
+Winnipeg, CA
+Halifax, CA
+St. John's, CA
+Quebec City, CA
+Whitehorse, CA
+Yellowknife, CA
+Iqaluit, CA
+Boston, US
+Philadelphia, US
+Washington, US
+Atlanta, US
+Miami, US
+New Orleans, US
+Houston, US
+Dallas, US
+Austin, US
+Denver, US
+Phoenix, US
+Las Vegas, US
+Salt Lake City, US
+Seattle, US
+Portland, US
+San Francisco, US
+San Diego, US
+Minneapolis, US
+Detroit, US
+Pittsburgh, US
+Nashville, US
+Charleston, US
+Anchorage, US
+Honolulu, US
+San Juan, PR
+Mexico City, MX
+Guadalajara, MX
+Monterrey, MX
+Cancun, MX
+Oaxaca, MX
+Merida, MX
+Tijuana, MX
+Havana, CU
+Santo Domingo, DO
+Port-au-Prince, HT
+Kingston, JM
+Nassau, BS
+Bridgetown, BB
+Port of Spain, TT
+Guatemala City, GT
+San Salvador, SV
+Tegucigalpa, HN
+Managua, NI
+San Jose, CR
+Panama City, PA
+Belize City, BZ
+
+# ── 南美
+Bogota, CO
+Medellin, CO
+Cartagena, CO
+Caracas, VE
+Quito, EC
+Guayaquil, EC
+Lima, PE
+Cusco, PE
+La Paz, BO
+Santa Cruz de la Sierra, BO
+Santiago, CL
+Antofagasta, CL
+Asuncion, PY
+Montevideo, UY
+Buenos Aires, AR
+Cordoba, AR
+Mendoza, AR
+Bariloche, AR
+Sao Paulo, BR
+Rio de Janeiro, BR
+Brasilia, BR
+Salvador, BR
+Recife, BR
+Fortaleza, BR
+Porto Alegre, BR
+Curitiba, BR
+Florianopolis, BR
+Georgetown, GY
+Paramaribo, SR
+
+# ── 大洋洲
+Sydney, AU
+Melbourne, AU
+Brisbane, AU
+Perth, AU
+Adelaide, AU
+Canberra, AU
+Hobart, AU
+Darwin, AU
+Cairns, AU
+Alice Springs, AU
+Auckland, NZ
+Wellington, NZ
+Christchurch, NZ
+Dunedin, NZ
+Queenstown, NZ
+Port Moresby, PG
+Noumea, NC
+Papeete, PF
+Honiara, SB
+Port Vila, VU
+Nuku'alofa, TO
+Tarawa, KI
+Guam, GU
+
+# ── 高纬 / 极地。场次少，但下起来的样子和别处都不一样
+Longyearbyen, SJ
+Nuuk, GL
+Ilulissat, GL
+Utqiagvik, US
+Nome, US
+Narvik, NO
+Bodo, NO

@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-07-28T16:13:50.340939+00:00",
+  "fetched_at_utc": "2026-08-02T15:27:26.407576+00:00",
   "city": {
     "slug": "changsha",
     "name": "长沙",
@@ -18,11 +18,11 @@
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
     "start": "2025-10-01",
-    "end": "2026-07-01"
+    "end": "2026-08-01"
   },
   "index_range_utc": {
     "start": "2025-10-08T12:00",
-    "end": "2026-07-01T23:00"
+    "end": "2026-08-01T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,21 +80,21 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 6396,
-    "audible_hours": 880,
-    "audible_ratio": 0.1376,
+    "hours": 7140,
+    "audible_hours": 996,
+    "audible_ratio": 0.1395,
     "liquid_p50": 0.8,
     "liquid_p85": 2.4,
-    "liquid_p97": 5.763,
+    "liquid_p97": 5.6149999999999975,
     "liquid_max": 14.3,
-    "events": 193,
+    "events": 224,
     "event_hours_max": 25,
     "event_hours_median": 3.0,
     "gap_max": 592,
     "cin_missing_hours": 1036,
-    "weather_code_thunder_hours": 85,
-    "thunder_score_p90": 0.2314300000000002,
-    "thunder_score_p99": 0.8249500000000006,
+    "weather_code_thunder_hours": 131,
+    "thunder_score_p90": 0.25769000000000053,
+    "thunder_score_p99": 0.8181640000000003,
     "thunder_score_max": 1.0
   },
   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."

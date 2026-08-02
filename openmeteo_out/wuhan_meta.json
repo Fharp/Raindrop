@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-07-28T16:13:29.134389+00:00",
+  "fetched_at_utc": "2026-08-02T15:26:36.493764+00:00",
   "city": {
     "slug": "wuhan",
     "name": "武汉",
@@ -18,11 +18,11 @@
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
     "start": "2025-10-01",
-    "end": "2026-07-01"
+    "end": "2026-08-01"
   },
   "index_range_utc": {
     "start": "2025-10-08T12:00",
-    "end": "2026-07-01T23:00"
+    "end": "2026-08-01T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,22 +80,22 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 6396,
-    "audible_hours": 673,
-    "audible_ratio": 0.1052,
+    "hours": 7140,
+    "audible_hours": 812,
+    "audible_ratio": 0.1137,
     "liquid_p50": 0.8,
-    "liquid_p85": 2.0,
-    "liquid_p97": 5.274000000000001,
+    "liquid_p85": 2.2,
+    "liquid_p97": 5.069999999999993,
     "liquid_max": 24.9,
-    "events": 144,
+    "events": 179,
     "event_hours_max": 39,
     "event_hours_median": 2.0,
     "gap_max": 545,
     "cin_missing_hours": 1131,
-    "weather_code_thunder_hours": 55,
-    "thunder_score_p90": 0.3935,
-    "thunder_score_p99": 0.7602499999999999,
-    "thunder_score_max": 0.93
+    "weather_code_thunder_hours": 128,
+    "thunder_score_p90": 0.41162,
+    "thunder_score_p99": 0.8286499999999999,
+    "thunder_score_max": 1.0
   },
   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."
 }

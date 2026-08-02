@@ -606,24 +606,155 @@ def run_city(city, args):
     return {"slug": city["slug"], "index_start": times[lo], "index_end": times[hi], "stats": stats}
 
 
+def has_data(model, lat, lon, day):
+    """这一天这个模式到底有没有数据。
+    超出归档范围时接口要么报 400，要么整列返回 null，两种都算没有。"""
+    try:
+        # http_get_json_retry 返回的是 (payload, url) 两元组，不是 payload
+        payload, _ = http_get_json_retry(base_params(model, lat, lon, ["precipitation"], day, day))
+    except Exception:
+        return False
+    # 400 之类不重试的状态码也会正常返回，body 里带 error/reason
+    if not isinstance(payload, dict) or payload.get("error"):
+        return False
+    vals = (payload.get("hourly") or {}).get("precipitation") or []
+    return any(v is not None for v in vals)
+
+
+def probe_earliest(args):
+    """二分找出最早有数据的那一天。
+
+    别凭文档猜：ECMWF 是 2025-10-01 才转成 open-data 的，
+    在那之前 IFS HRES 9 km 能不能取、取到什么分辨率，各档接口口径不一样。
+    与其读文档不如问接口——一次探测只花 1×(1/14)×(1/10) ≈ 0.007 次额度。"""
+    city = CITIES[0]
+    if args.city:
+        city = next((c for c in CITIES if c["slug"] == args.city), city)
+    lo = date(2020, 1, 1)
+    hi = date.fromisoformat(args.start)
+    print("在 %s（%.4f, %.4f）上探测 %s @ %s"
+          % (city["name"], city["lat"], city["lon"], args.model, API_HOST))
+
+    if not has_data(args.model, city["lat"], city["lon"], hi):
+        print("  %s 就已经没有数据了。先确认模式名和 host 对不对。" % hi)
+        return
+    print("  %s  有" % hi)
+    if has_data(args.model, city["lat"], city["lon"], lo):
+        print("  %s  有 —— 比探测下界还早，自己往前挪 lo 再跑" % lo)
+        return
+    print("  %s  无" % lo)
+
+    n = 0
+    while (hi - lo).days > 1:
+        mid = lo + timedelta(days=(hi - lo).days // 2)
+        n += 1
+        if has_data(args.model, city["lat"], city["lon"], mid):
+            hi = mid
+        else:
+            lo = mid
+        print("  %s  %s" % (mid, "有" if hi == mid else "无"))
+        time.sleep(0.3)
+
+    print("\n最早可用：%s（%d 次探测）" % (hi, n))
+
+    # 分块缓存是按 (start, end) 做键的，start 一挪，所有块的边界跟着挪，
+    # 已经下过的全部落空。往前挪整数个 CHUNK_DAYS 就能让老块继续命中。
+    cur = date.fromisoformat(DEFAULT_START)
+    k = (cur - hi).days // CHUNK_DAYS
+    if k > 0:
+        aligned = cur - timedelta(days=k * CHUNK_DAYS)
+        span = (date.fromisoformat(DEFAULT_END) - aligned).days + 1
+        chunks = math.ceil(span / CHUNK_DAYS)
+        per = chunks * (CHUNK_DAYS / 14.0) * (len(VARIABLES) / 10.0)
+        print("建议起点 %s —— 比 %s 早 %d 天，正好是 %d 个整块，"
+              % (aligned, DEFAULT_START, k * CHUNK_DAYS, k))
+        print("  已经下过的分块缓存能继续命中，只付新增那段的钱。")
+        print("  按 %d 座城算，合计约 %.0f 次加权调用（每城 %.1f 次）。"
+              % (len(CITIES), per * len(CITIES), per))
+
+
 def main():
+    # global 必须写在本函数首次用到 API_HOST 之前（下面 --host 的 default 就用了它），
+    # 否则是 SyntaxError。ast.parse 查不出来，compile() 才会报。
+    global API_HOST
     ap = argparse.ArgumentParser(description="Open-Meteo IFS HRES 抓取与索引编译")
-    ap.add_argument("--city", default=None, help="只跑某个 slug，不填则跑 CITIES 全表")
-    ap.add_argument("--start", default=DEFAULT_START)
-    ap.add_argument("--end", default=DEFAULT_END, help="含当日 00–23 时")
+    ap.add_argument("--city", default=None, help="只跑某个 slug，不填则跑全表")
+    ap.add_argument("--cities-file", default=None,
+                    help="城市表 JSON（make_cities.py 的产物）。不填则用本文件里的 CITIES")
+    ap.add_argument("--skip-existing", action="store_true",
+                    help="跳过 outdir 里已经有产物的城。跨天分批跑、或中断后重跑时用")
+    ap.add_argument("--max-calls", type=float, default=0,
+                    help="本次最多消耗多少次加权调用，到了就停（免费版每天 10000）。0 为不限")
+    ap.add_argument("--start", default=DEFAULT_START, help="也可以写 today")
+    ap.add_argument("--end", default=DEFAULT_END, help="含当日 00–23 时；也可以写 today")
+    ap.add_argument("--host", default=API_HOST,
+                    help="改数据源。历史预报档（默认）与再分析档 "
+                         "https://archive-api.open-meteo.com/v1/archive 的变量集不同，"
+                         "换之前先用 --find-start 探一探")
+    ap.add_argument("--find-start", action="store_true",
+                    help="二分探测这个模式最早有数据的日期，然后退出。"
+                         "每次探测只要 1 天 1 个变量，几乎不耗额度")
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--outdir", default="openmeteo_out")
     ap.add_argument("--sleep", type=float, default=1.0)
     args = ap.parse_args()
 
+    API_HOST = args.host
+
+    today = datetime.now(timezone.utc).date()
+    if args.start == "today":
+        args.start = today.isoformat()
+    if args.end == "today":
+        # 历史预报档要等模式跑完并归档，当天的数据通常还不全，往回退一天
+        args.end = (today - timedelta(days=1)).isoformat()
+
+    if args.find_start:
+        probe_earliest(args)
+        return
+
     if date.fromisoformat(args.end) < date.fromisoformat(args.start):
         sys.exit("end 早于 start")
 
     cities = CITIES
+    if args.cities_file:
+        with open(args.cities_file, encoding="utf-8") as f:
+            cities = json.load(f)
+        need = {"slug", "name", "lat", "lon", "tz"}
+        for c in cities:
+            missing = need - set(c)
+            if missing:
+                sys.exit("城市表里有条目缺字段 %s：%r" % (sorted(missing), c))
+        seen = set()
+        dup = [c["slug"] for c in cities if c["slug"] in seen or seen.add(c["slug"])]
+        if dup:
+            sys.exit("城市表里 slug 重复：%s。slug 是 web_out/scores/<slug>/ 的路径，"
+                     "撞车会互相覆盖" % ", ".join(sorted(set(dup))))
     if args.city:
-        cities = [c for c in CITIES if c["slug"] == args.city]
+        cities = [c for c in cities if c["slug"] == args.city]
         if not cities:
-            sys.exit("CITIES 表里没有 slug=%s" % args.city)
+            sys.exit("城市表里没有 slug=%s" % args.city)
+
+    if args.skip_existing:
+        before = len(cities)
+        cities = [c for c in cities
+                  if not os.path.exists(os.path.join(args.outdir, c["slug"], "index.json"))]
+        if before != len(cities):
+            print("已有产物的 %d 座城跳过" % (before - len(cities)))
+
+    # Open-Meteo 的计费是加权的：weight = 地点数 × (天数/14) × (变量数/10)。
+    # 免费版每天 10000 次、每小时 5000、每分钟 600。这里只算日额度，
+    # 分钟额度由 --sleep 兜着（一块 30 天的请求 ≈ 3.9 次，1 秒一发远够不着 600/min）。
+    span_days = (date.fromisoformat(args.end) - date.fromisoformat(args.start)).days + 1
+    n_chunks = math.ceil(span_days / CHUNK_DAYS)
+    per_city = n_chunks * (CHUNK_DAYS / 14.0) * (len(VARIABLES) / 10.0)
+    per_city += math.ceil(len(VARIABLES) / PROBE_BATCH) * (1 / 14.0) * (PROBE_BATCH / 10.0)
+    print("每城预计消耗约 %.1f 次加权调用，%d 座城合计约 %.0f 次"
+          % (per_city, len(cities), per_city * len(cities)))
+    if args.max_calls and per_city * len(cities) > args.max_calls:
+        room = int(args.max_calls // per_city)
+        print("  超过 --max-calls %.0f，本次只跑前 %d 座；"
+              "剩下的明天加 --skip-existing 接着跑" % (args.max_calls, room))
+        cities = cities[:room]
 
     os.makedirs(args.outdir, exist_ok=True)
     print("模式 %s   请求区间 %s … %s   城市 %d 座   变量 %d 项"

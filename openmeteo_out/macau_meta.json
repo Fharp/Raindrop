@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-07-28T16:16:11.114607+00:00",
+  "fetched_at_utc": "2026-08-02T15:33:37.344745+00:00",
   "city": {
     "slug": "macau",
     "name": "澳门",
@@ -18,11 +18,11 @@
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
     "start": "2025-10-01",
-    "end": "2026-07-01"
+    "end": "2026-08-01"
   },
   "index_range_utc": {
     "start": "2025-10-08T12:00",
-    "end": "2026-07-01T23:00"
+    "end": "2026-08-01T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,21 +80,21 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 6396,
-    "audible_hours": 714,
-    "audible_ratio": 0.1116,
-    "liquid_p50": 0.7,
+    "hours": 7140,
+    "audible_hours": 996,
+    "audible_ratio": 0.1395,
+    "liquid_p50": 0.8,
     "liquid_p85": 2.5,
-    "liquid_p97": 6.422000000000002,
-    "liquid_max": 10.8,
-    "events": 182,
-    "event_hours_max": 49,
+    "liquid_p97": 6.314999999999998,
+    "liquid_max": 12.2,
+    "events": 227,
+    "event_hours_max": 53,
     "event_hours_median": 3.0,
     "gap_max": 899,
     "cin_missing_hours": 529,
-    "weather_code_thunder_hours": 204,
-    "thunder_score_p90": 0.6500000000000001,
-    "thunder_score_p99": 0.971061999999999,
+    "weather_code_thunder_hours": 333,
+    "thunder_score_p90": 0.6322700000000001,
+    "thunder_score_p99": 0.943497000000001,
     "thunder_score_max": 1.0
   },
   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."

@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-07-28T16:16:55.575953+00:00",
+  "fetched_at_utc": "2026-08-02T15:35:20.954070+00:00",
   "city": {
     "slug": "xiamen",
     "name": "厦门",
@@ -18,11 +18,11 @@
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
     "start": "2025-10-01",
-    "end": "2026-07-01"
+    "end": "2026-08-01"
   },
   "index_range_utc": {
     "start": "2025-10-08T12:00",
-    "end": "2026-07-01T23:00"
+    "end": "2026-08-01T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,22 +80,22 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 6396,
-    "audible_hours": 527,
-    "audible_ratio": 0.0824,
+    "hours": 7140,
+    "audible_hours": 668,
+    "audible_ratio": 0.0936,
     "liquid_p50": 0.7,
-    "liquid_p85": 2.2,
-    "liquid_p97": 6.131999999999982,
+    "liquid_p85": 2.3949999999999934,
+    "liquid_p97": 6.6,
     "liquid_max": 23.6,
-    "events": 133,
+    "events": 165,
     "event_hours_max": 23,
     "event_hours_median": 3.0,
     "gap_max": 761,
     "cin_missing_hours": 1395,
-    "weather_code_thunder_hours": 49,
-    "thunder_score_p90": 0.20075000000000004,
-    "thunder_score_p99": 0.5262230000000002,
-    "thunder_score_max": 0.665
+    "weather_code_thunder_hours": 99,
+    "thunder_score_p90": 0.3983000000000008,
+    "thunder_score_p99": 0.6637999999999998,
+    "thunder_score_max": 0.688
   },
   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."
 }

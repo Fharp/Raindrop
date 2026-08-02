@@ -232,6 +232,8 @@ let audio = null;
 let fx = null, bridge = null, ready = false;
 let hud = null, seeking = false;
 let idleTimer = 0;
+let switching = false;
+let override = false;
 const IDLE_MS = 2600;
 
 let stage = "启动";
@@ -268,7 +270,6 @@ const fit = () => {
 fit();
 
 let cityNow   = null;
-let placeKnown = false;
 let dryNow    = false;
 let wantSound = false;
 let picker = null, drawer = null;
@@ -313,72 +314,77 @@ async function evaluateCity(city) {
 
   const [doc, wx] = await Promise.all([docP, wxP]);
 
-  if (!doc.hasHour) return { raining: false, hours: (wx && wx.nextHours) || doc.dataHours };
-  if (wx && wx.ok && !wx.raining) return { raining: false, hours: wx.nextHours };
-  return { raining: true, hours: null };
+  let out;
+  if (!doc.hasHour) out = { raining: false, hours: (wx && wx.nextHours) || doc.dataHours };
+  else if (wx && wx.ok && !wx.raining) out = { raining: false, hours: wx.nextHours };
+  else out = { raining: true, hours: null };
+
+  if (!out.raining && !(out.hours > 0 && out.hours <= 99)) return { raining: true, hours: null };
+  return out;
 }
 
 function setDry(on, name, hours) {
   dryNow = !!on;
   if (bridge) bridge.setDry(dryNow);
   if (caption) caption.setDry(dryNow ? { name, hours } : null);
-  if (dryNow) hideBox(); else if (!btn.disabled) showBox(true);
+  showBox(true);
 }
 
 let applyToken = 0;
 
-async function applyCity(city, opts) {
-  opts = opts || {};
+async function tune(city, o) {
+  o = o || {};
+  if (!audio || !city) return;
   const my = ++applyToken;
-  cityNow = city;
-  if (picker) picker.setCurrent(city.slug);
 
-  if (caption) caption.setExpect(city.slug);
+  if (o.fresh) {
+    cityNow = city;
+    override = false;
+    if (picker) picker.setCurrent(city.slug);
+    if (caption) caption.setExpect(city.slug);
+  }
+  if (o.refetch && WX) RainWeather.forget(city.slug);
 
   let v;
   try { v = await evaluateCity(city); }
   catch (e) { v = { raining: true, hours: null }; }
   if (my !== applyToken) return;
 
-  if (v.raining) {
-    setDry(false);
-    try {
-      await pickInCity(audio, city.slug);
-      if (my !== applyToken) return;
-      if (opts.play && wantSound && !audio.playing) await audio.play();
-    } catch (e) { fail(e, "换城市"); }
-  } else {
-    if (audio && audio.playing) audio.stop();
+  if (!v.raining && !override) {
+    if (audio.playing) audio.stop();
     setDry(true, city.name, v.hours);
+    return;
   }
+
+  const repick = o.fresh || o.repick || dryNow;
+  if (dryNow) setDry(false);
+  if (!repick) return;
+  try {
+    await pickInCity(audio, city.slug);
+    if (my !== applyToken) return;
+    if (wantSound && !audio.playing) await audio.play();
+  } catch (e) { switching = false; fail(e, "换城市"); }
 }
 
 async function watch() {
-  if (!audio || !cityNow || !FOLLOW) return;
+  if (!cityNow || !FOLLOW) return;
+  if (!dryNow) { await tune(cityNow, { refetch: true }); return; }
+
   if (WX) RainWeather.forget(cityNow.slug);
   let v;
   try { v = await evaluateCity(cityNow); } catch (e) { return; }
-
-  if (v.raining === !dryNow) {
-
-    if (dryNow && caption) caption.setDry({ name: cityNow.name, hours: v.hours });
+  if (!v.raining && !override) {
+    if (caption) caption.setDry({ name: cityNow.name, hours: v.hours });
     return;
   }
-  if (v.raining) {
-    setDry(false);
-    try {
-      await pickInCity(audio, cityNow.slug);
-      if (wantSound && !audio.playing) await audio.play();
-    } catch (e) { fail(e, "起雨"); }
-  } else {
-    if (audio.playing) audio.stop();
-    setDry(true, cityNow.name, v.hours);
-  }
+  await tune(cityNow, {});
 }
 
 async function pickInCity(a, slug) {
-  const was = a.playing;
-  if (was) a.stop();
+
+  const was = a.playing || wantSound;
+  switching = true;
+  a.stop();
 
   if (!a.cityDoc || a.cityDoc.slug !== slug) await a.loadCity(slug);
   const now  = new Date();
@@ -396,7 +402,9 @@ async function pickInCity(a, slug) {
 
   const off = (now.getUTCMinutes() * 60 + now.getUTCSeconds()) / 3600;
   a.cursor  = Math.min(frame + off, Math.max(0, a.score.frames.length - 1e-6));
-  if (was) await a.play();
+  switching = false;
+
+  if (was || wantSound) await a.play();
 
   if (caption) caption.refresh();
   if (DEBUG) { fillCities(); fillEvents(); }
@@ -410,16 +418,7 @@ async function onEnd() {
     catch (e) { fail(e, "换场"); }
     return;
   }
-  if (WX) RainWeather.forget(cityNow.slug);
-  let v;
-  try { v = await evaluateCity(cityNow); } catch (e) { v = { raining: true, hours: null }; }
-  if (v.raining) {
-    setDry(false);
-    try { await pickInCity(audio, cityNow.slug); if (wantSound) await audio.play(); }
-    catch (e) { fail(e, "换场"); }
-  } else {
-    setDry(true, cityNow.name, v.hours);
-  }
+  await tune(cityNow, { refetch: true, repick: true });
 }
 
 async function settlePlace(a) {
@@ -430,12 +429,11 @@ async function settlePlace(a) {
   let p = null;
   try { p = await RainPlace.resolve(a.roster); } catch (e) { p = null; }
 
-  placeKnown = !!(p && p.source === "geolocation");
-  if (caption) caption.setPlace(placeKnown ? p.name : null);
+  if (caption) caption.setPlace(p && p.source === "geolocation" ? p.name : null);
 
   if (p) {
     const c = shape(p);
-    if (FOLLOW) await applyCity(c, { play: false });
+    if (FOLLOW) await tune(c, { fresh: true });
     else { cityNow = c; if (picker) picker.setCurrent(c.slug); }
     if (DEBUG) console.debug("[rain] 城市", p.name, p.source,
       p.distanceKm ? p.distanceKm.toFixed(0) + " km" : "");
@@ -464,19 +462,21 @@ RainAudio.create({
       button: $("#place"), panel: $("#picker"), list: $("#pickerList"),
       roster: a.roster,
       onPick: c => {
-        placeKnown = true;
         if (caption) caption.setPlace(c.name);
-        applyCity(shape(c), { play: true });
+        tune(shape(c), { fresh: true });
       },
     });
   }
 
-  settlePlace(a);
-  return timed(a.readyFirst || a.ready, 180000, "解码雨层");
+  const placed = settlePlace(a);
+  return Promise.all([
+    timed(a.readyFirst || a.ready, 180000, "解码雨层"),
+    Promise.race([placed, new Promise(r => setTimeout(r, 8000))]),
+  ]);
 }).then(() => {
   btn.disabled = false;
   btn.classList.remove("loading");
-  if (dryNow) hideBox();
+  showBox(false);
   if (DEBUG) { fillCities(); fillEvents(); }
 }).catch(e => { fail(e, "预载音频"); $("#menu").classList.add("ready"); });
 
@@ -560,27 +560,50 @@ addEventListener("resize", () => {
 });
 
 function showBox(auto) {
-  if (dryNow) { hideBox(); return; }
+  if (btn.disabled) return;
   btn.textContent = (audio && audio.playing) ? "静音" : "聆听";
   btn.classList.remove("hidden");
   clearTimeout(idleTimer);
+
   if (auto && audio && audio.playing) idleTimer = setTimeout(hideBox, IDLE_MS);
 }
 function hideBox() { clearTimeout(idleTimer); btn.classList.add("hidden"); }
 
 for (const ev of ["pointermove", "pointerdown", "wheel", "touchstart", "keydown"]) {
-  addEventListener(ev, () => { if (audio && audio.playing) showBox(true); }, { passive: true });
+  addEventListener(ev, () => showBox(true), { passive: true });
 }
 
 btn.addEventListener("pointerenter", () => clearTimeout(idleTimer));
-btn.addEventListener("pointerleave", () => { if (audio && audio.playing) showBox(true); });
+btn.addEventListener("pointerleave", () => showBox(true));
 
 btn.addEventListener("click", async () => {
-  if (!audio || dryNow) return;
+  if (!audio) return;
   try {
-    if (audio.playing) { audio.stop(); wantSound = false; showBox(false); return; }
-    await audio.play();
+    if (audio.playing) {
+      audio.stop(); wantSound = false;
+
+      if (override) { override = false; watch(); }
+      showBox(false);
+      return;
+    }
     wantSound = true;
+    if (dryNow && cityNow) {
+
+      override = true;
+      setDry(false);
+      try { await audio.ctx.resume(); } catch (e) {}
+      await pickInCity(audio, cityNow.slug);
+      if (bridge) bridge.audio = audio;
+      hideBox();
+      return;
+    }
+    if (switching) {
+
+      try { await audio.ctx.resume(); } catch (e) {}
+      hideBox();
+      return;
+    }
+    await audio.play();
     if (bridge) bridge.audio = audio;
     hideBox();
   } catch (e) { fail(e, "起播"); }
@@ -597,7 +620,7 @@ addEventListener("keydown", e => {
   if (e.target && e.target.closest && e.target.closest("#picker,#drawer,#menu,#place")) return;
   if (typeof RainMenu !== "undefined" && RainMenu.anyOpen()) return;
 
-  if (e.key === " ") { if (e.target === btn || dryNow) return; btn.click(); }
+  if (e.key === " ") { if (e.target === btn) return; btn.click(); }
   else if ((e.key === "d" || e.key === "D") && audio && !dryNow) {
     (FOLLOW && cityNow ? pickInCity(audio, cityNow.slug) : audio.pickRandom())
       .then(() => audio.playing && audio.play())
@@ -619,7 +642,7 @@ function stepEvent(d) {
   if (next) audio.loadEvent(next.event_id).then(fillEvents).catch(e => fail(e, "切场次"));
 }
 
-window.rain = { evaluateCity, applyCity, watch, setDry, shape,
+window.rain = { evaluateCity, tune, watch, setDry, shape,
                 get city() { return cityNow; }, get dry() { return dryNow; } };
 
 function fillCities() {
@@ -671,9 +694,8 @@ if (DEBUG) {
     if (!audio) return;
     const c = audio.roster.cities.find(x => x.slug === ev.target.value);
     if (!c) return;
-    placeKnown = true;
     if (caption) caption.setPlace(c.name);
-    await applyCity(shape(c), { play: true });
+    await tune(shape(c), { fresh: true });
     fillEvents();
   });
   $("#hEv").addEventListener("change", ev => {
