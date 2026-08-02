@@ -1,13 +1,17 @@
 /* rain_caption.js — 左上角那两行字
  *
- *   第一行  城市 18:11        此地此刻。城市由 rain_place 决定，时刻走该城时区。
- *   第二行  二零二六年八月一日，上海在下雨。
+ *   第一行  城市 18:11        此地此刻。城市由 rain_place 决定，取不到写「地球某处」。
+ *   第二行  二零二六年八月一日，上海此刻在下雨。
  *                              正在播放的那一场雨：它自己的日期、它自己的城市。
+ *           那座城此刻没在下雨时，整行换成
+ *           天津的下一场雨将在六小时后开始。
  *
- * 第二行完全从 audio.score / audio.progress 读，所以换场、换城、拖进度条、
- * 跨过零点，全都会自动跟上，不需要谁来通知它。
+ * 第二行在「在下雨」时完全从 audio.score / audio.progress 读，所以换场、换城、
+ * 拖进度条、跨过零点，全都会自动跟上，不需要谁来通知它；
+ * 在「没下雨」时由 setDry() 给定，谁判定的、怎么判定的，这里一概不管。
  *
  * 只写这两行内容，不写任何状态字（不出现「定位中」「加载中」之类）。
+ * 拿不到小时数就把第二行留空——宁可不说，也不说错。
  */
 (function (global) {
 "use strict";
@@ -16,13 +20,15 @@
 const YEAR_DIGIT = "零一二三四五六七八九";
 const NUM_DIGIT  = "零一二三四五六七八九";
 
+const UNKNOWN_PLACE = "地球某处";
+
 function cnYear(y) {
   let s = "";
   for (const ch of String(y)) s += YEAR_DIGIT[+ch];
   return s;
 }
 
-/** 1–31 的月日读法：一 / 十 / 十一 / 二十 / 二十一 / 三十一。 */
+/** 1–99 的读法：一 / 十 / 十一 / 二十 / 二十一 / 七十二。月、日、小时数共用。 */
 function cnSmall(n) {
   if (n < 10) return NUM_DIGIT[n];
   if (n === 10) return "十";
@@ -56,6 +62,12 @@ function sentenceOf(audio) {
          city + "此刻在下雨。";
 }
 
+/** 没在下雨时的那一行。小时数超出念法范围（>99）或没有，就返回空串。 */
+function sentenceDry(name, hours) {
+  if (!name || !(hours > 0) || hours > 99) return "";
+  return name + "的下一场雨将在" + cnSmall(hours) + "小时后开始。";
+}
+
 /**
  * @param {object} o  { root, city, clock, line, audio }
  *                    audio 可以是播放器本身，也可以是个返回播放器的函数
@@ -66,6 +78,11 @@ function attach(o) {
   const grab  = typeof o.audio === "function" ? o.audio : () => o.audio;
 
   let shown = "", clockTimer = 0, lineTimer = 0, swapTimer = 0, live = false;
+  let dry = null;                 // null＝在下雨；否则 {name, hours}
+
+  function sentence() {
+    return dry ? sentenceDry(dry.name, dry.hours) : sentenceOf(grab());
+  }
 
   function paintClock() {
     clockEl.textContent = clockNow();
@@ -77,14 +94,17 @@ function attach(o) {
   }
 
   function paintLine() {
-    const s = sentenceOf(grab());
-    if (!s || s === shown) return;
-    if (!shown) { lineEl.textContent = s; shown = s; return; }
-    // 换场时软换字：先落下去，再换，再起来
+    const s = sentence();
+    if (s === shown) return;
+    // 还没有谱、又不是干燥态：什么都不写，别把已有的字擦掉
+    if (!s && !dry) return;
+    if (!shown) { lineEl.textContent = s; shown = s; lineEl.style.opacity = s ? "" : "0"; return; }
+    // 换场／进出干燥态时软换字：先落下去，再换，再起来
     lineEl.style.opacity = "0";
     clearTimeout(swapTimer);
     swapTimer = setTimeout(() => {
-      lineEl.textContent = s; shown = s; lineEl.style.opacity = "";
+      lineEl.textContent = s; shown = s;
+      lineEl.style.opacity = s ? "" : "0";
     }, 420);
   }
 
@@ -105,12 +125,24 @@ function attach(o) {
       return api;
     },
 
-    /** 左上角写哪座城；时钟随之改用该城时区。 */
-    /** 左上角写哪座城。时刻始终是本机时间，与这座城的时区无关。 */
+    /** 左上角写哪座城。时刻始终是本机时间，与这座城的时区无关。
+     *  给空值＝定位没拿到，写「地球某处」。 */
     setPlace(name) {
-      cityEl.textContent = name || "";
+      cityEl.textContent = name || UNKNOWN_PLACE;
       return api;
     },
+
+    /** 第二行的口径。
+     *  @param {null|{name:string,hours:number}} info
+     *         null 表示在下雨，第二行回到从谱里读；
+     *         给对象表示没在下雨，写「xx 的下一场雨将在 n 小时后开始。」 */
+    setDry(info) {
+      dry = info || null;
+      if (live) paintLine();
+      return api;
+    },
+
+    get dry() { return dry; },
 
     /** 整块淡入。等字体到位再露面，免得先闪一眼系统衬线。 */
     reveal() {
@@ -134,6 +166,8 @@ function attach(o) {
   return api;
 }
 
-global.RainCaption = { attach, cnYear, cnSmall, clockNow, sentenceOf };
+global.RainCaption = {
+  attach, cnYear, cnSmall, clockNow, sentenceOf, sentenceDry, UNKNOWN_PLACE,
+};
 
 })(typeof window !== "undefined" ? window : globalThis);

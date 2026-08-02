@@ -88,6 +88,16 @@ const CFG = {
   // ── 没有音频时的静态雨（按下播放键之前）
   idle: { intensity: 0.35, character: 0.30, wind: 0 },
 
+  // ── 干燥态：那座城此刻没在下雨。setDry(true) 进入。
+  //    新雨滴立刻停发，原有的水珠照常蒸发流走，玻璃上的细水珠层慢慢褪掉，
+  //    雾则一路累到满——最后窗外只剩一片雾气。谁来判定「没在下雨」不归这里管。
+  dryIn:            3.0,     // 秒，各项参数过渡到干燥态的时间常数
+  dryOut:           1.2,     // 秒，重新下雨时收回来的时间常数（比进去快）
+  dryEvaporate:     2.4,     // 干燥时蒸发率乘多少
+  dryMistTime:      26,      // 秒，干燥时雾多久铺满。大＝雾起得慢
+  dryMistColor:     [0.060, 0.070, 0.084, 1],   // 比常态亮一点，雾才读得出来
+  dryGlassDecay:    0.12,    // 1/s，细水珠图层的指数淡出速率（τ≈8 秒）
+
   // ── 收尸。见 _sweep。cullMass 会随拥挤程度自动上浮，保证名额永远有余量，
   //    否则 raindrops.length 一顶到 spawnLimit，库就彻底停止生成新滴，画面冻住。
   cullMass:           4,              // 下限：mass 低于此值一定收掉
@@ -105,10 +115,24 @@ class Bridge {
     this.t = 0; this._last = 0; this._raf = 0;
     this.flash = 0; this.wind = 0; this.culled = 0;
     this.scale = 1; this._cull = CFG.cullMass;
+    // 干燥态。_dryWant 是开关（0/1），dry 是它平滑之后的实际进度
+    this.dry = 0; this._dryWant = 0; this._primeT0 = 0; this._noFade = false;
     // 平滑后的状态
     this.s = { i: CFG.idle.intensity, c: CFG.idle.character, w: CFG.idle.wind, lv: 0 };
     this._mistBase = (fx.options.mistColor || [0.01, 0.01, 0.01, 1]).slice();
+    this._mistNow  = this._mistBase.slice();
     this._diffBase = (fx.options.raindropDiffuseLight || [0.2, 0.2, 0.2]).slice();
+  }
+
+  /** 进／出干燥态。true＝那座城此刻没在下雨，停发新雨滴。 */
+  setDry(on) {
+    const want = on ? 1 : 0;
+    if (want === this._dryWant) return this;
+    this._dryWant = want;
+    // 重新下雨时把「开场铺底」再跑一遍，玻璃两三秒内重新湿透，
+    // 而不是让人看着细水珠一条条重新长出来
+    if (!want) this._primeT0 = this.t;
+    return this;
   }
 
   async start() {
@@ -136,6 +160,7 @@ class Bridge {
           fx.simulator.update(time);
           this._sweep(dt);
           fx.renderer.render(fx.simulator.raindrops, time);
+          this._dryGlass(dt);       // 必须在 render 之后：它每帧都会重设 matrlErase
         } else {
           this._sweep(dt);          // 退回内置循环时插不进两者之间，只能近似
         }
@@ -202,6 +227,12 @@ class Bridge {
     const S2 = S * S;
     this.scale = S;
 
+    // 干燥态的斜坡。进去慢、出来快，两头都不许出现台阶
+    const dTau = this._dryWant ? CFG.dryIn : CFG.dryOut;
+    this.dry += (this._dryWant - this.dry) * (1 - Math.exp(-dt / Math.max(0.05, dTau)));
+    if (Math.abs(this._dryWant - this.dry) < 3e-3) this.dry = this._dryWant;
+    const d = clamp(this.dry, 0, 1);
+
     const ei = Math.pow(i, CFG.spawnIntervalPow);
     const iv = lerp2(CFG.spawnIntervalCalm, CFG.spawnIntervalStorm, ei);
     // 倍率封顶：阵与阵之间可以变小，但不许真的停
@@ -209,15 +240,26 @@ class Bridge {
                              0.2, CFG.gustMaxScale) / S2;      // 面积大＝同样密度要更多滴
     o.spawnInterval = [iv[0] * spawnScale, iv[1] * spawnScale];
     o.spawnSize     = lerp2(CFG.spawnSizeCalm, CFG.spawnSizeStorm, i).map(x => x * S);
-    o.spawnLimit    = Math.min(CFG.spawnLimitMax, Math.round(CFG.spawnLimit * S2));
+    // 干燥态用 -1 而不是 0 来关生成。库里的条件是
+    //     if (raindrops.length <= spawnLimit) { …spawner.update(dt); trySpawn… }
+    // 写 0 的话，等水珠全走光、length 归零，0 <= 0 成立，雨会自己又下起来；
+    // 写 -1 恒不成立，同时 spawner.currentTime 一并冻住，
+    // 恢复时不会因为攒下一大截时间而爆出一片水珠。
+    o.spawnLimit    = this._dryWant
+      ? -1
+      : Math.min(CFG.spawnLimitMax, Math.round(CFG.spawnLimit * S2));
     o.slipRate      = lerp(CFG.slipRateCalm, CFG.slipRateStorm, i);
     o.motionInterval = lerp2(CFG.motionIntervalCalm, CFG.motionIntervalStorm, i);
     o.initialSpread = CFG.initialSpread;
     o.dropletSize   = CFG.dropletSize.map(x => x * S);
-    o.dropletsPerSeconds = this._dropletRate(i, drive, gust) * S2;
+    // 「停止新的雨滴坠落」是二值的，和 spawnLimit 一样不吃斜坡：
+    // 细水珠层本来就是常驻贴图，停止往上加看不出接缝，而按斜坡乘下去
+    // 只会在收敛尾巴上留几滴/秒，永远不真的归零。
+    o.dropletsPerSeconds = this._dryWant ? 0 : this._dropletRate(i, drive, gust) * S2;
     o.gravity       = lerp(CFG.gravityCalm, CFG.gravityStorm, i) * S;
-    o.evaporate     = lerp(CFG.evaporateCalm, CFG.evaporateStorm, i) * S2;
-    o.mistTime      = lerp(CFG.mistTimeCalm, CFG.mistTimeStorm, i);
+    // 蒸发加快，但不能快到一眨眼就干——「慢慢蒸发流走」是这一段的全部内容
+    o.evaporate     = lerp(CFG.evaporateCalm, CFG.evaporateStorm, i) * S2 * lerp(1, CFG.dryEvaporate, d);
+    o.mistTime      = lerp(lerp(CFG.mistTimeCalm, CFG.mistTimeStorm, i), CFG.dryMistTime, d);
     o.trailDropDensity = lerp(CFG.trailCalm, CFG.trailStorm, i);
 
     // xShifting 在库里会被一个 (-1,1) 的随机数乘掉，只剩大小。
@@ -225,13 +267,19 @@ class Bridge {
     o.xShifting = [0, CFG.wanderCalm + CFG.wanderWind * Math.abs(w)];
     this.wind = w;
 
+    // 雾色的基准随干燥度插值。雾的 alpha 会一路累到 1，只有把 rgb 抬起来，
+    // 「窗外只剩雾气」才读得出是雾，而不只是背景更糊了一点。
+    const mb = this._mistBase, md = CFG.dryMistColor;
+    for (let n = 0; n < 4; n++) this._mistNow[n] = lerp(mb[n], md[n] != null ? md[n] : mb[n], d);
+    o.mistColor = this._mistNow.slice();
+
     // 雷
     const strike = a && a.takeStrikes ? a.takeStrikes() : null;
     if (strike) this.flash = Math.max(this.flash, clamp(strike.gain, 0, 1));
     if (this.flash > 0.001) {
       this.flash *= Math.exp(-CFG.flashDecay * dt);
       const f = this.flash;
-      const m = this._mistBase;
+      const m = this._mistNow;
       o.mistColor = [m[0] + f * CFG.flashMist, m[1] + f * CFG.flashMist, m[2] + f * CFG.flashMist * 1.05, m[3]];
       const d = this._diffBase;
       o.raindropDiffuseLight = [d[0] + f * 0.5, d[1] + f * 0.5, d[2] + f * 0.55];
@@ -245,7 +293,7 @@ class Bridge {
       }
     } else if (this.flash) {
       this.flash = 0;
-      o.mistColor = this._mistBase.slice();
+      o.mistColor = this._mistNow.slice();
       o.raindropDiffuseLight = this._diffBase.slice();
       if (this.flashEl) this.flashEl.style.opacity = "0";
     }
@@ -265,7 +313,8 @@ class Bridge {
    *  开场再乘一个倍率，让玻璃在两三秒内就湿透，而不是让人看着痕迹一条条长出来。 */
   _dropletRate(i, drive, gust) {
     const base = lerp(CFG.dropletsCalm, CFG.dropletsStorm, Math.pow(i, CFG.dropletsPow));
-    const prime = this.t < CFG.primeSeconds ? CFG.primeGain : 1;
+    // 开场、以及每次从干燥态回到下雨，都从 _primeT0 起再铺一次底
+    const prime = (this.t - this._primeT0) < CFG.primeSeconds ? CFG.primeGain : 1;
     return Math.max(CFG.dropletsFloor, base * drive * gust) * prime;
   }
 
@@ -311,11 +360,51 @@ class Bridge {
     this.culled = dead;
   }
 
+  /** 干燥态下把玻璃上的细水珠层慢慢褪掉。
+   *
+   *  为什么非做不可：细水珠画进 dropletTexture 这张**常驻**贴图，库里只有
+   *  一条擦除路径——每帧把 raindropComposeTex 用 matrlErase 打上去，
+   *  也就是「被经过的水珠擦掉」。停发新雨滴之后没有水珠再经过，
+   *  这层痕迹就永远留在玻璃上，`dropletsPerSeconds = 0` 只是不再往上加。
+   *  结果是雾起来了、水珠没了，玻璃却还湿着一层静止的斑点。
+   *
+   *  做法是拿库自己那套擦除材质，源换成内置的纯白贴图（alpha 恒为 1）。
+   *  它的混合是 dst *= (1 - srcAlpha)，片元里 srcAlpha = smoothstep(e.x, e.y, 1)，
+   *  所以只要解出让 smoothstep 落在 f 上的那对参数，就是一次全屏的
+   *  「整层乘以 (1-f)」——指数淡出，没有硬切。
+   *  smoothstep 的反函数：t = 1/2 − sin(asin(1−2f)/3)，再取 e = [0, 1/t]。
+   *
+   *  这一步动的是库的内部对象，所以整段包在 try 里；一旦出岔子就永久关掉，
+   *  退化成「细水珠层留在原地」，其余干燥态照常，绝不让渲染循环因此断掉。 */
+  _dryGlass(dt) {
+    if (this._noFade || this.dry < 0.02) return;
+    const R  = this.fx.renderer;
+    const zr = R && R.renderer;
+    const white = zr && zr.assets && zr.assets.textures && zr.assets.textures.default;
+    if (!R || !zr || !R.dropletTexture || !R.matrlErase || !white || typeof zr.blit !== "function") {
+      this._noFade = true; return;
+    }
+    const f = 1 - Math.exp(-CFG.dryGlassDecay * this.dry * dt);
+    if (!(f > 1e-5)) return;
+    const t = 0.5 - Math.sin(Math.asin(clamp(1 - 2 * f, -1, 1)) / 3);
+    if (!(t > 1e-6) || !Number.isFinite(t)) return;
+    try {
+      const es = R.matrlErase.eraserSize;
+      if (es && typeof es.x === "number") { es.x = 0; es.y = 1 / t; }
+      else R.matrlErase.eraserSize = [0, 1 / t];
+      zr.blit(white, R.dropletTexture, R.matrlErase);
+    } catch (e) {
+      this._noFade = true;
+      this.fadeError = e;
+    }
+  }
+
   get stats() {
     const sim = this.fx.simulator;
     const o = this.fx.options;
     return {
       i: this.s.i, c: this.s.c, w: this.s.w, level: this.s.lv, flash: this.flash,
+      dry: this.dry,
       drops: sim ? sim.raindrops.length : -1,
       limit: o.spawnLimit, cull: this._cull, scale: this.scale,
       spawnPerSec: o.spawnInterval ? 2 / (o.spawnInterval[0] + o.spawnInterval[1]) : 0,

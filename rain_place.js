@@ -89,6 +89,14 @@ async function rainingNow(roster) {
   const cs = list(roster);
   if (!cs.length) return [];
 
+  // rain_weather 在的话就走它：判定阈值与页面别处一致（0.3 mm/h，同 manifest），
+  // 而且和城市下拉菜单共用同一份缓存，一次会话只打一发批量请求。
+  if (global.RainWeather && typeof global.RainWeather.batch === "function") {
+    const map = await global.RainWeather.batch(cs);
+    return cs.filter(c => { const w = map.get(c.slug); return !!(w && w.raining); });
+  }
+
+  // 单独部署 rain_place 时的退路：自己问一次，口径用 mm > 0
   const url = CFG.api +
     "?latitude="  + cs.map(c => c.lat.toFixed(4)).join(",") +
     "&longitude=" + cs.map(c => c.lon.toFixed(4)).join(",") +
