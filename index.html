@@ -330,19 +330,31 @@ function nextHourOfDay(hod, h) {
  * @returns {Promise<{raining:boolean, hours:number|null}>}
  */
 async function evaluateCity(city) {
-  let hasHour = true, dataHours = null;
-  try {
-    if (!audio.cityDoc || audio.cityDoc.slug !== city.slug) await audio.loadCity(city.slug);
-    const hod = audio.cityDoc.hour_of_day || {};
-    const h = new Date().getUTCHours();
-    hasHour = !!((hod[String(h)] || []).length);
-    if (!hasHour) dataHours = nextHourOfDay(hod, h);
-  } catch (e) { /* 城市索引取不到，交给天气侧判 */ }
+  // 页面一起手就为下拉菜单打过一发批量 current，57 座城的结果都在里面。
+  // 它说这座城在下雨，就不必再为它单独问一次逐时预报——那份预报只在
+  // 「没在下雨」时才有用（要拿它算小时数）。换城的等待因此少掉一整个网络往返。
+  const bulk = WX ? RainWeather.batchCached() : null;
+  const hit  = bulk && bulk.get(city.slug);
+  const skipWx = !!(hit && hit.raining);
 
-  let wx = null;
-  if (WX) { try { wx = await RainWeather.city(city); } catch (e) { wx = null; } }
+  // 城市索引与天气并发。串起来问的话，慢的那一头会把快的那一头也拖住。
+  const docP = (async () => {
+    try {
+      if (!audio.cityDoc || audio.cityDoc.slug !== city.slug) await audio.loadCity(city.slug);
+      const hod = audio.cityDoc.hour_of_day || {};
+      const h = new Date().getUTCHours();
+      const has = !!((hod[String(h)] || []).length);
+      return { hasHour: has, dataHours: has ? null : nextHourOfDay(hod, h) };
+    } catch (e) { return { hasHour: true, dataHours: null }; }   // 索引取不到，交给天气侧判
+  })();
 
-  if (!hasHour) return { raining: false, hours: (wx && wx.nextHours) || dataHours };
+  const wxP = (WX && !skipWx)
+    ? RainWeather.city(city).catch(() => null)
+    : Promise.resolve(null);
+
+  const [doc, wx] = await Promise.all([docP, wxP]);
+
+  if (!doc.hasHour) return { raining: false, hours: (wx && wx.nextHours) || doc.dataHours };
   if (wx && wx.ok && !wx.raining) return { raining: false, hours: wx.nextHours };
   return { raining: true, hours: null };
 }
@@ -364,6 +376,9 @@ async function applyCity(city, opts) {
   const my = ++applyToken;
   cityNow = city;
   if (picker) picker.setCurrent(city.slug);
+  // 先宣告：从这一刻起第二行不再说上一座城。谱到位之前它是空的，
+  // 而不是继续挂着一句已经不成立的话。
+  if (caption) caption.setExpect(city.slug);
 
   let v;
   try { v = await evaluateCity(city); }
@@ -413,7 +428,9 @@ async function watch() {
 async function pickInCity(a, slug) {
   const was = a.playing;
   if (was) a.stop();                    // 先停：否则 loadEvent 会自己抢着重启一次
-  await a.loadCity(slug);
+  // evaluateCity 多半刚拉过同一份索引，不要再拉一次——单城索引 26–190 KB，
+  // 白等一个往返，第二行就多空那么久。
+  if (!a.cityDoc || a.cityDoc.slug !== slug) await a.loadCity(slug);
   const now  = new Date();
   const cand = (a.cityDoc.hour_of_day && a.cityDoc.hour_of_day[String(now.getUTCHours())]) || [];
   let evId, frame = 0;
@@ -430,6 +447,8 @@ async function pickInCity(a, slug) {
   const off = (now.getUTCMinutes() * 60 + now.getUTCSeconds()) / 3600;
   a.cursor  = Math.min(frame + off, Math.max(0, a.score.frames.length - 1e-6));
   if (was) await a.play();
+  // 谱已经换好，立刻重画一次，不必干等下一次 2 秒轮询
+  if (caption) caption.refresh();
   if (DEBUG) { fillCities(); fillEvents(); }
 }
 
@@ -437,7 +456,8 @@ async function pickInCity(a, slug) {
 async function onEnd() {
   if (!audio) return;
   if (!FOLLOW || !cityNow) {
-    try { await audio.pickRandom(); await audio.play(); }
+    if (caption) caption.setExpect(null);      // 不跟随城市，谁的谱都算数
+    try { await audio.pickRandom(); await audio.play(); if (caption) caption.refresh(); }
     catch (e) { fail(e, "换场"); }
     return;
   }

@@ -10,6 +10,10 @@
  * 拖进度条、跨过零点，全都会自动跟上，不需要谁来通知它；
  * 在「没下雨」时由 setDry() 给定，谁判定的、怎么判定的，这里一概不管。
  *
+ * 换城要用 setExpect() 先报一声要换到哪。谱是后到的，不报的话，从点下去到
+ * 新谱落地这段时间里，第一行已经写着纽约、第二行还在说昆明此刻在下雨——
+ * 那不是「还没加载完」，那是一句错话。报了之后这段时间第二行留空。
+ *
  * 只写这两行内容，不写任何状态字（不出现「定位中」「加载中」之类）。
  * 拿不到小时数就把第二行留空——宁可不说，也不说错。
  */
@@ -77,11 +81,17 @@ function attach(o) {
   const root  = o.root, cityEl = o.city, clockEl = o.clock, lineEl = o.line;
   const grab  = typeof o.audio === "function" ? o.audio : () => o.audio;
 
-  let shown = "", clockTimer = 0, lineTimer = 0, swapTimer = 0, live = false;
+  let shown = "", target = "", fading = false;
+  let clockTimer = 0, lineTimer = 0, swapTimer = 0, live = false;
   let dry = null;                 // null＝在下雨；否则 {name, hours}
+  let expect = null;              // 正在等哪座城的谱（slug）。到位之前第二行留空
 
   function sentence() {
-    return dry ? sentenceDry(dry.name, dry.hours) : sentenceOf(grab());
+    if (dry) return sentenceDry(dry.name, dry.hours);
+    const a = grab();
+    // 谱还是上一座城的：这句话此刻是错的，不许显示
+    if (expect && a && a.score && a.score.city !== expect) return "";
+    return sentenceOf(a);
   }
 
   function paintClock() {
@@ -93,19 +103,29 @@ function attach(o) {
     clockTimer = setTimeout(paintClock, Math.max(500, ms + 50));
   }
 
+  /** 真正把字写进 DOM。淡出结束时调一次，用的一定是当时最新的 target。 */
+  function commit() {
+    fading = false;
+    lineEl.textContent = target;
+    shown = target;
+    lineEl.style.opacity = target ? "" : "0";
+  }
+
   function paintLine() {
     const s = sentence();
-    if (s === shown) return;
-    // 还没有谱、又不是干燥态：什么都不写，别把已有的字擦掉
-    if (!s && !dry) return;
-    if (!shown) { lineEl.textContent = s; shown = s; lineEl.style.opacity = s ? "" : "0"; return; }
-    // 换场／进出干燥态时软换字：先落下去，再换，再起来
+    // 还没有谱、又不是干燥态、也没在等哪座城：什么都不写，别把已有的字擦掉
+    if (!s && !dry && !expect) return;
+    if (s === target) return;
+    target = s;
+    if (!shown) { commit(); return; }          // 屏上本来就没字，直接写，靠 CSS 淡入
+    // 换场／换城／进出干燥态时软换字：先落下去，再换，再起来。
+    // 已经在淡出中就不重开一轮——换城时「清空」与「新谱到位」往往前后脚发生，
+    // 重开会把两次淡出叠在一起，看着像闪了一下。
+    if (fading) return;
+    fading = true;
     lineEl.style.opacity = "0";
     clearTimeout(swapTimer);
-    swapTimer = setTimeout(() => {
-      lineEl.textContent = s; shown = s;
-      lineEl.style.opacity = s ? "" : "0";
-    }, 420);
+    swapTimer = setTimeout(commit, 420);
   }
 
   function wake() {
@@ -143,6 +163,20 @@ function attach(o) {
     },
 
     get dry() { return dry; },
+
+    /** 要换到哪座城（slug）。在新谱落地之前，第二行留空而不是继续说上一座城。
+     *  给 null＝不挑，任何谱都认（?follow=0 的全局随机就是这种）。 */
+    setExpect(slug) {
+      expect = slug || null;
+      if (live) paintLine();
+      return api;
+    },
+
+    /** 立刻重画一次。谱刚换完时叫一下，不必干等下一次 2 秒轮询。 */
+    refresh() {
+      if (live) { paintClock(); paintLine(); }
+      return api;
+    },
 
     /** 整块淡入。等字体到位再露面，免得先闪一眼系统衬线。 */
     reveal() {
