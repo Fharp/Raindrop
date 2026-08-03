@@ -40,11 +40,10 @@ function attachCityPicker(o) {
   }
 
   function mark() {
-    const wet = (global.RainWeather && global.RainWeather.batchCached()) || null;
     for (const it of list.children) {
-      const w = wet && wet.get(it.dataset.slug);
-      it.classList.toggle("wet", !!(w && w.raining));
-      it.classList.toggle("dry", !!(wet && (!w || !w.raining)));
+      const w = o.wetOf ? o.wetOf(it.dataset.slug) : null;
+      it.classList.toggle("wet", w === true);
+      it.classList.toggle("dry", w === false);
       it.classList.toggle("now", it.dataset.slug === current);
     }
   }

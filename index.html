@@ -208,7 +208,6 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 <script src="bundle/index.js"></script>
 <script src="rain_eq.js"></script>
 <script src="rain_audio.js"></script>
-<script src="rain_weather.js"></script>
 <script src="rain_bridge.js"></script>
 <script src="rain_place.js"></script>
 <script src="rain_caption.js"></script>
@@ -224,14 +223,14 @@ const DEBUG = !!q.get("debug");
 
 const FOLLOW = q.get("follow") !== "0";
 
-const WX = q.get("wx") !== "0" && typeof RainWeather !== "undefined";
-
 const WATCH_MS = num("watch", 300) * 1000;
 
 let audio = null;
 let fx = null, bridge = null, ready = false;
 let hud = null, seeking = false;
 let idleTimer = 0;
+let roster = null;
+let lastHour = new Date().getUTCHours();
 let switching = false;
 let override = false;
 const IDLE_MS = 2600;
@@ -293,34 +292,23 @@ function nextHourOfDay(hod, h) {
 }
 
 async function evaluateCity(city) {
+  try {
+    if (!audio.cityDoc || audio.cityDoc.slug !== city.slug) await audio.loadCity(city.slug);
+    const hod = audio.cityDoc.hour_of_day || {};
+    const h = new Date().getUTCHours();
+    if ((hod[String(h)] || []).length) return { raining: true, hours: null };
+    const n = nextHourOfDay(hod, h);
+    if (!(n > 0)) return { raining: true, hours: null };
+    return { raining: false, hours: n };
+  } catch (e) {
+    return { raining: true, hours: null };
+  }
+}
 
-  const bulk = WX ? RainWeather.batchCached() : null;
-  const hit  = bulk && bulk.get(city.slug);
-  const skipWx = !!(hit && hit.raining);
-
-  const docP = (async () => {
-    try {
-      if (!audio.cityDoc || audio.cityDoc.slug !== city.slug) await audio.loadCity(city.slug);
-      const hod = audio.cityDoc.hour_of_day || {};
-      const h = new Date().getUTCHours();
-      const has = !!((hod[String(h)] || []).length);
-      return { hasHour: has, dataHours: has ? null : nextHourOfDay(hod, h) };
-    } catch (e) { return { hasHour: true, dataHours: null }; }
-  })();
-
-  const wxP = (WX && !skipWx)
-    ? RainWeather.city(city).catch(() => null)
-    : Promise.resolve(null);
-
-  const [doc, wx] = await Promise.all([docP, wxP]);
-
-  let out;
-  if (!doc.hasHour) out = { raining: false, hours: (wx && wx.nextHours) || doc.dataHours };
-  else if (wx && wx.ok && !wx.raining) out = { raining: false, hours: wx.nextHours };
-  else out = { raining: true, hours: null };
-
-  if (!out.raining && !(out.hours > 0 && out.hours <= 99)) return { raining: true, hours: null };
-  return out;
+function wetAt(slug, h) {
+  const c = roster && roster.get(slug);
+  if (!c || !c.hour_of_day_count) return null;
+  return (c.hour_of_day_count[String(h)] || 0) > 0;
 }
 
 function setDry(on, name, hours) {
@@ -343,8 +331,6 @@ async function tune(city, o) {
     if (picker) picker.setCurrent(city.slug);
     if (caption) caption.setExpect(city.slug);
   }
-  if (o.refetch && WX) RainWeather.forget(city.slug);
-
   let v;
   try { v = await evaluateCity(city); }
   catch (e) { v = { raining: true, hours: null }; }
@@ -368,12 +354,15 @@ async function tune(city, o) {
 
 async function watch() {
   if (!cityNow || !FOLLOW) return;
-  if (!dryNow) { await tune(cityNow, { refetch: true }); return; }
-
-  if (WX) RainWeather.forget(cityNow.slug);
+  const h = new Date().getUTCHours();
+  if (h === lastHour && !dryNow) return;
+  const rolled = h !== lastHour;
+  lastHour = h;
+  if (rolled && picker) picker.refresh();
+  if (!dryNow) { if (rolled) await tune(cityNow, {}); return; }
   let v;
   try { v = await evaluateCity(cityNow); } catch (e) { return; }
-  if (!v.raining && !override) {
+  if (!v.raining) {
     if (caption) caption.setDry({ name: cityNow.name, hours: v.hours });
     return;
   }
@@ -418,7 +407,7 @@ async function onEnd() {
     catch (e) { fail(e, "换场"); }
     return;
   }
-  await tune(cityNow, { refetch: true, repick: true });
+  await tune(cityNow, { repick: true });
 }
 
 async function settlePlace(a) {
@@ -441,11 +430,6 @@ async function settlePlace(a) {
   if (caption) caption.reveal();
   showMenu();
 
-  if (WX) {
-    RainWeather.batch(RainPlace.list(a.roster))
-      .then(() => { if (picker) picker.refresh(); })
-      .catch(() => {});
-  }
 }
 
 stage = "预载音频";
@@ -456,11 +440,14 @@ RainAudio.create({
 }).then(a => {
   audio = window.audio = a;
   a.onend = () => onEnd();
+  roster = new Map(((a.roster && a.roster.cities) || []).map(c => [c.slug, c]));
 
   if (typeof RainMenu !== "undefined") {
     picker = RainMenu.attachCityPicker({
       button: $("#place"), panel: $("#picker"), list: $("#pickerList"),
       roster: a.roster,
+
+      wetOf: slug => wetAt(slug, new Date().getUTCHours()),
       onPick: c => {
         if (caption) caption.setPlace(c.name);
         tune(shape(c), { fresh: true });

@@ -6,9 +6,7 @@ const CFG = {
   geoTimeoutMs:  6000,
   geoMaxAgeMs:   1800000,
   live:          true,
-  liveTimeoutMs: 5000,
   deadlineMs:    9000,
-  api: "https://api.open-meteo.com/v1/forecast",
 };
 
 const RADIUS_KM = 6371.0088;
@@ -65,44 +63,12 @@ function position() {
   });
 }
 
-async function rainingNow(roster) {
-  const cs = list(roster);
-  if (!cs.length) return [];
-
-  if (global.RainWeather && typeof global.RainWeather.batch === "function") {
-    const map = await global.RainWeather.batch(cs);
-    return cs.filter(c => { const w = map.get(c.slug); return !!(w && w.raining); });
-  }
-
-  const url = CFG.api +
-    "?latitude="  + cs.map(c => c.lat.toFixed(4)).join(",") +
-    "&longitude=" + cs.map(c => c.lon.toFixed(4)).join(",") +
-    "&current=rain,showers,precipitation";
-
-  const ctl = typeof AbortController === "function" ? new AbortController() : null;
-  const kill = setTimeout(() => ctl && ctl.abort(), CFG.liveTimeoutMs);
-  let res;
-  try {
-    res = await fetch(url, ctl ? { signal: ctl.signal } : undefined);
-  } finally { clearTimeout(kill); }
-  if (!res.ok) throw new Error("Open-Meteo HTTP " + res.status);
-
-  const body = await res.json();
-  const rows = Array.isArray(body) ? body : [body];
-
-  if (rows.length !== cs.length) throw new Error("返回条数与请求不符");
-
-  const wet = [];
-  for (let i = 0; i < cs.length; i++) {
-    const cur = rows[i] && rows[i].current;
-    if (!cur) continue;
-
-    const mm = (cur.rain != null || cur.showers != null)
-      ? (cur.rain || 0) + (cur.showers || 0)
-      : (cur.precipitation || 0);
-    if (mm > 0) wet.push(cs[i]);
-  }
-  return wet;
+function playableNow(roster) {
+  const h = String(new Date().getUTCHours());
+  const ok = new Set(((roster && roster.cities) || [])
+    .filter(c => (c.hour_of_day_count || {})[h] > 0)
+    .map(c => c.slug));
+  return list(roster).filter(c => ok.has(c.slug));
 }
 
 function resolve(roster) {
@@ -114,10 +80,8 @@ function resolve(roster) {
     } catch (e) {  }
 
     if (CFG.live) {
-      try {
-        const c = pick(await rainingNow(roster));
-        if (c) return Object.assign({}, c, { distanceKm: 0, source: "raining" });
-      } catch (e) {  }
+      const c = pick(playableNow(roster));
+      if (c) return Object.assign({}, c, { distanceKm: 0, source: "raining" });
     }
 
     const c = pick(list(roster));
