@@ -206,12 +206,29 @@ def probe_variables(model, lat, lon, variables, day):
     return ok, dropped
 
 
+CHUNK_EPOCH = date(2000, 1, 1)
+
+
 def date_chunks(start, end, days):
-    cur = start
-    while cur <= end:
-        stop = min(cur + timedelta(days=days - 1), end)
-        yield cur, stop
-        cur = stop + timedelta(days=1)
+    """把 [start, end] 切成块，块的边界钉在一条固定网格上
+    （从 CHUNK_EPOCH 起每 days 天一格），不跟着 start 走。
+
+    这一点是滚动窗口能不能跑起来的关键：窗口每天往前挪一天，
+    如果块从 start 开始切，所有块的起止日期都会跟着挪一天，
+    缓存键全部落空，等于每天把一整年重下一遍。
+    钉在网格上的话，中间那些块的键一天都不会变，
+    每天只有末尾那个不完整的块需要重取。
+
+    第三个返回值 full 表示这一块被完整覆盖。不完整的块不写缓存——
+    否则明天会拿到今天那份缺了尾巴的数据，而且永远不会再更新。"""
+    k0 = (start - CHUNK_EPOCH).days // days
+    k1 = (end - CHUNK_EPOCH).days // days
+    for k in range(k0, k1 + 1):
+        a = CHUNK_EPOCH + timedelta(days=k * days)
+        b = a + timedelta(days=days - 1)
+        c0, c1 = max(a, start), min(b, end)
+        if c0 <= c1:
+            yield c0, c1, (c0 == a and c1 == b)
 
 
 def cache_path(cache_dir, model, lat, lon, variables, start, end):
@@ -225,9 +242,9 @@ def fetch_all(model, lat, lon, variables, start, end, cache_dir, sleep_s):
     os.makedirs(cache_dir, exist_ok=True)
     chunks = list(date_chunks(start, end, CHUNK_DAYS))
     payloads = []
-    for i, (c0, c1) in enumerate(chunks, 1):
-        path = cache_path(cache_dir, model, lat, lon, variables, c0, c1)
-        if os.path.exists(path):
+    for i, (c0, c1, full) in enumerate(chunks, 1):
+        path = cache_path(cache_dir, model, lat, lon, variables, c0, c1) if full else None
+        if path and os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 payloads.append(json.load(f))
             print("  [%2d/%2d] %s → %s  (缓存)" % (i, len(chunks), c0, c1))
@@ -237,8 +254,9 @@ def fetch_all(model, lat, lon, variables, start, end, cache_dir, sleep_s):
         if payload.get("error"):
             raise RuntimeError("请求失败：%s\nURL: %s" % (payload.get("reason"), url))
         payload["_request_url"] = url
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False)
+        if path:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False)
         payloads.append(payload)
         time.sleep(sleep_s)
     return payloads
@@ -606,6 +624,34 @@ def run_city(city, args):
     return {"slug": city["slug"], "index_start": times[lo], "index_end": times[hi], "stats": stats}
 
 
+def local_today(tz_name):
+    """按指定时区取「今天」。
+    Windows 上 zoneinfo 常常没有时区库（要装 tzdata），
+    所以 Asia/Shanghai 留一条固定 +08:00 的退路——1991 年之后中国没有夏令时。"""
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo(tz_name)).date()
+    except Exception:
+        if tz_name in ("Asia/Shanghai", "Asia/Chongqing", "Asia/Hong_Kong", "Asia/Macau",
+                       "Asia/Taipei", "PRC"):
+            return datetime.now(timezone(timedelta(hours=8))).date()
+        return datetime.now(timezone.utc).date()
+
+
+def months_back(d, n):
+    """往前推 n 个整月，日不够就退到当月最后一天。"""
+    y, m = d.year, d.month - n
+    while m <= 0:
+        m += 12
+        y -= 1
+    day = d.day
+    while True:
+        try:
+            return date(y, m, day)
+        except ValueError:
+            day -= 1
+
+
 def has_data(model, lat, lon, day):
     """这一天这个模式到底有没有数据。
     超出归档范围时接口要么报 400，要么整列返回 null，两种都算没有。"""
@@ -621,56 +667,55 @@ def has_data(model, lat, lon, day):
     return any(v is not None for v in vals)
 
 
-def probe_earliest(args):
-    """二分找出最早有数据的那一天。
+ARCHIVE_HOST = "https://archive-api.open-meteo.com/v1/archive"
 
-    别凭文档猜：ECMWF 是 2025-10-01 才转成 open-data 的，
-    在那之前 IFS HRES 9 km 能不能取、取到什么分辨率，各档接口口径不一样。
-    与其读文档不如问接口——一次探测只花 1×(1/14)×(1/10) ≈ 0.007 次额度。"""
+# 探测用的日期梯子。挑的都是文档里提到的分界点附近：
+# 历史预报档号称 2021/2022 起、IFS HRES 单次运行档 2024-03 起、
+# ECMWF 转 open-data 是 2025-10-01；历史天气档的 IFS 分析场是 2017 起、ERA5 是 1940 起。
+PROBE_DATES = ["2017-01-15", "2019-01-15", "2021-01-15", "2022-01-15",
+               "2023-01-15", "2024-04-15", "2025-06-15", "2025-10-15"]
+
+
+def probe_earliest(args):
+    """横向对照两个档口在若干日期上有没有数据。
+
+    不做二分。二分只能回答「有没有数」，回答不了「这是谁的数」——
+    历史预报档在归档范围之外不会报错，会拿别的数据集顶上，
+    于是二分会一路探到 2020 年甚至更早，给出一个假的起点。
+    列成表格，哪一档从哪天开始才是它自己的数据，一眼就看得出来。"""
+    global API_HOST
     city = CITIES[0]
     if args.city:
         city = next((c for c in CITIES if c["slug"] == args.city), city)
-    lo = date(2020, 1, 1)
-    hi = date.fromisoformat(args.start)
-    print("在 %s（%.4f, %.4f）上探测 %s @ %s"
-          % (city["name"], city["lat"], city["lon"], args.model, API_HOST))
+    print("在 %s（%.4f, %.4f）上探测 %s\n" % (city["name"], city["lat"], city["lon"], args.model))
 
-    if not has_data(args.model, city["lat"], city["lon"], hi):
-        print("  %s 就已经没有数据了。先确认模式名和 host 对不对。" % hi)
-        return
-    print("  %s  有" % hi)
-    if has_data(args.model, city["lat"], city["lon"], lo):
-        print("  %s  有 —— 比探测下界还早，自己往前挪 lo 再跑" % lo)
-        return
-    print("  %s  无" % lo)
+    hosts = [("历史预报档", args.host), ("历史天气档", ARCHIVE_HOST)]
+    print("%-14s %s" % ("", "  ".join("%-12s" % d for d in PROBE_DATES)))
+    for label, host in hosts:
+        API_HOST = host
+        cells = []
+        for d in PROBE_DATES:
+            cells.append("有" if has_data(args.model, city["lat"], city["lon"],
+                                          date.fromisoformat(d)) else "—")
+            time.sleep(0.3)
+        print("%-14s %s" % (label, "  ".join("%-12s" % c for c in cells)))
+    API_HOST = args.host
 
-    n = 0
-    while (hi - lo).days > 1:
-        mid = lo + timedelta(days=(hi - lo).days // 2)
-        n += 1
-        if has_data(args.model, city["lat"], city["lon"], mid):
-            hi = mid
-        else:
-            lo = mid
-        print("  %s  %s" % (mid, "有" if hi == mid else "无"))
-        time.sleep(0.3)
+    print("""
+读法：
+  历史预报档（historical-forecast-api）存的是模式当年跑出来的预报。
+  官方说法是「视模式与归档情况，从 2021 或 2022 年起」。
+  这一行如果在 2021 之前也显示「有」，那不是 IFS 的归档预报，
+  是接口拿别的数据集顶上了——数据源不一致，不要拿它当长历史用。
 
-    print("\n最早可用：%s（%d 次探测）" % (hi, n))
+  历史天气档（archive-api，--host %s）是再分析：
+  ECMWF IFS 分析场 9 km 从 2017 年，ERA5 从 1940 年。
+  要拉多年历史，用这一档。代价是变量集与预报档不同，
+  probe_variables 会自动丢掉取不到的；CAPE / CIN 一旦被丢掉，雷的评分会退化。
 
-    # 分块缓存是按 (start, end) 做键的，start 一挪，所有块的边界跟着挪，
-    # 已经下过的全部落空。往前挪整数个 CHUNK_DAYS 就能让老块继续命中。
-    cur = date.fromisoformat(DEFAULT_START)
-    k = (cur - hi).days // CHUNK_DAYS
-    if k > 0:
-        aligned = cur - timedelta(days=k * CHUNK_DAYS)
-        span = (date.fromisoformat(DEFAULT_END) - aligned).days + 1
-        chunks = math.ceil(span / CHUNK_DAYS)
-        per = chunks * (CHUNK_DAYS / 14.0) * (len(VARIABLES) / 10.0)
-        print("建议起点 %s —— 比 %s 早 %d 天，正好是 %d 个整块，"
-              % (aligned, DEFAULT_START, k * CHUNK_DAYS, k))
-        print("  已经下过的分块缓存能继续命中，只付新增那段的钱。")
-        print("  按 %d 座城算，合计约 %.0f 次加权调用（每城 %.1f 次）。"
-              % (len(CITIES), per * len(CITIES), per))
+  换档之前先拿一座城试跑，看它丢了哪些变量：
+    python pythondownload.py --host %s --city beijing --months 1
+""" % (ARCHIVE_HOST, ARCHIVE_HOST))
 
 
 def main():
@@ -685,6 +730,13 @@ def main():
                     help="跳过 outdir 里已经有产物的城。跨天分批跑、或中断后重跑时用")
     ap.add_argument("--max-calls", type=float, default=0,
                     help="本次最多消耗多少次加权调用，到了就停（免费版每天 10000）。0 为不限")
+    ap.add_argument("--months", type=int, default=0,
+                    help="滚动窗口：只取最近 N 个月，end 取 --tz 时区的昨天。"
+                         "给了它就忽略 --start/--end。每天跑一次就能一直保持最近 N 个月")
+    ap.add_argument("--tz", default="Asia/Shanghai",
+                    help="--months 和 today 按哪个时区算日期")
+    ap.add_argument("--floor", default=DEFAULT_START,
+                    help="数据最早可用日期，滚动窗口不会越过它。用 --find-start 探出来")
     ap.add_argument("--start", default=DEFAULT_START, help="也可以写 today")
     ap.add_argument("--end", default=DEFAULT_END, help="含当日 00–23 时；也可以写 today")
     ap.add_argument("--host", default=API_HOST,
@@ -701,12 +753,28 @@ def main():
 
     API_HOST = args.host
 
-    today = datetime.now(timezone.utc).date()
+    today = local_today(args.tz)
     if args.start == "today":
         args.start = today.isoformat()
     if args.end == "today":
         # 历史预报档要等模式跑完并归档，当天的数据通常还不全，往回退一天
         args.end = (today - timedelta(days=1)).isoformat()
+
+    if args.months:
+        end_d = today - timedelta(days=1)
+        start_d = months_back(end_d, args.months) + timedelta(days=1)
+        # 起点也钉到网格上（往前取整）。差这一下，窗口头上那块就从「每天重取」
+        # 变成「一次下完永久命中」，日常额度直接减半。
+        # 代价是实际跨度会比 N 个月多出不到 30 天——对一个雨的档案来说只多不少。
+        start_d = CHUNK_EPOCH + timedelta(
+            days=((start_d - CHUNK_EPOCH).days // CHUNK_DAYS) * CHUNK_DAYS)
+        floor_d = date.fromisoformat(args.floor)
+        if start_d < floor_d:
+            start_d = floor_d
+            print("窗口起点被 --floor 顶住：%s 之前没有数据，本次实际跨度 %d 天"
+                  % (args.floor, (end_d - start_d).days + 1))
+        args.start, args.end = start_d.isoformat(), end_d.isoformat()
+        print("滚动窗口（%s）：%s → %s" % (args.tz, args.start, args.end))
 
     if args.find_start:
         probe_earliest(args)
@@ -744,12 +812,18 @@ def main():
     # Open-Meteo 的计费是加权的：weight = 地点数 × (天数/14) × (变量数/10)。
     # 免费版每天 10000 次、每小时 5000、每分钟 600。这里只算日额度，
     # 分钟额度由 --sleep 兜着（一块 30 天的请求 ≈ 3.9 次，1 秒一发远够不着 600/min）。
-    span_days = (date.fromisoformat(args.end) - date.fromisoformat(args.start)).days + 1
-    n_chunks = math.ceil(span_days / CHUNK_DAYS)
-    per_city = n_chunks * (CHUNK_DAYS / 14.0) * (len(VARIABLES) / 10.0)
+    s_d, e_d = date.fromisoformat(args.start), date.fromisoformat(args.end)
+    blocks = list(date_chunks(s_d, e_d, CHUNK_DAYS))
+    unit = (CHUNK_DAYS / 14.0) * (len(VARIABLES) / 10.0)
+    per_city = len(blocks) * unit
     per_city += math.ceil(len(VARIABLES) / PROBE_BATCH) * (1 / 14.0) * (PROBE_BATCH / 10.0)
-    print("每城预计消耗约 %.1f 次加权调用，%d 座城合计约 %.0f 次"
+    partial = sum(1 for _, _, full in blocks if not full)
+    print("跨度 %d 天，切成 %d 块（其中 %d 块不完整，每次都要重取）"
+          % ((e_d - s_d).days + 1, len(blocks), partial))
+    print("首次全量：每城约 %.1f 次加权调用，%d 座城合计约 %.0f 次"
           % (per_city, len(cities), per_city * len(cities)))
+    print("之后每天：缓存命中完整的块，每城只重取 %d 块 ≈ %.1f 次，合计约 %.0f 次"
+          % (partial, partial * unit, partial * unit * len(cities)))
     if args.max_calls and per_city * len(cities) > args.max_calls:
         room = int(args.max_calls // per_city)
         print("  超过 --max-calls %.0f，本次只跑前 %d 座；"

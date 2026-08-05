@@ -1,0 +1,101 @@
+{
+  "fetched_at_utc": "2026-08-05T09:44:14.009645+00:00",
+  "city": {
+    "slug": "baoji",
+    "name": "Baoji",
+    "timezone": "Asia/Shanghai"
+  },
+  "requested_coordinates": {
+    "latitude": 34.3678,
+    "longitude": 107.237
+  },
+  "grid_cell": {
+    "latitude": 34.411247,
+    "longitude": 107.20755,
+    "elevation_m": 566.0
+  },
+  "model": "ecmwf_ifs",
+  "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
+  "requested_range_utc": {
+    "start": "2026-01-14",
+    "end": "2026-08-04"
+  },
+  "index_range_utc": {
+    "start": "2026-01-14T00:00",
+    "end": "2026-08-04T23:00"
+  },
+  "variables_fetched": [
+    "precipitation",
+    "rain",
+    "showers",
+    "snowfall",
+    "snowfall_water_equivalent",
+    "snow_depth",
+    "weather_code",
+    "cape",
+    "convective_inhibition",
+    "boundary_layer_height",
+    "temperature_2m",
+    "wind_speed_10m",
+    "wind_gusts_10m",
+    "wind_direction_10m",
+    "cloud_cover",
+    "visibility",
+    "is_day",
+    "soil_moisture_0_to_7cm"
+  ],
+  "variables_rejected": {},
+  "gap_tolerant_fields": {
+    "convective_inhibition": "空值视为无抑制，cin_term = 1.0"
+  },
+  "units_raw": {
+    "time": "iso8601",
+    "precipitation": "mm",
+    "rain": "mm",
+    "showers": "mm",
+    "snowfall": "cm",
+    "snowfall_water_equivalent": "mm",
+    "snow_depth": "m",
+    "weather_code": "wmo code",
+    "cape": "J/kg",
+    "convective_inhibition": "J/kg",
+    "boundary_layer_height": "m",
+    "temperature_2m": "°C",
+    "wind_speed_10m": "m/s",
+    "wind_gusts_10m": "m/s",
+    "wind_direction_10m": "°",
+    "cloud_cover": "%",
+    "visibility": "m",
+    "is_day": "",
+    "soil_moisture_0_to_7cm": "m³/m³"
+  },
+  "derived_units": {
+    "liquid_mm": "mm/h，= precipitation − snowfall_water_equivalent",
+    "wind_ms": "m/s",
+    "gust_ms": "m/s",
+    "visibility_m": "m",
+    "snow_depth_m": "m",
+    "pbl_m": "m",
+    "thunder_score": "无量纲，0–1，已移除 li_term，λ 系数需重新标定",
+    "gap_to_next": "小时；-1 表示本区间内此后不再降水"
+  },
+  "statistics": {
+    "hours": 4872,
+    "audible_hours": 318,
+    "audible_ratio": 0.0653,
+    "liquid_p50": 0.7,
+    "liquid_p85": 1.9,
+    "liquid_p97": 3.5490000000000013,
+    "liquid_max": 8.5,
+    "events": 54,
+    "event_hours_max": 29,
+    "event_hours_median": 4.0,
+    "gap_max": 292,
+    "cin_missing_hours": 1192,
+    "weather_code_thunder_hours": 8,
+    "thunder_score_p90": 0.09980000000000018,
+    "thunder_score_p99": 0.20599600000000004,
+    "thunder_score_max": 0.2094
+  },
+  "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."
+}

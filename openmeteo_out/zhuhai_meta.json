@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-08-02T15:38:06.517826+00:00",
+  "fetched_at_utc": "2026-08-05T09:10:16.536911+00:00",
   "city": {
     "slug": "zhuhai",
     "name": "珠海",
@@ -17,12 +17,12 @@
   "model": "ecmwf_ifs",
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
-    "start": "2025-10-01",
-    "end": "2026-08-01"
+    "start": "2026-01-14",
+    "end": "2026-08-04"
   },
   "index_range_utc": {
-    "start": "2025-10-08T12:00",
-    "end": "2026-08-01T23:00"
+    "start": "2026-01-14T00:00",
+    "end": "2026-08-04T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,19 +80,19 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 7140,
-    "audible_hours": 988,
-    "audible_ratio": 0.1384,
+    "hours": 4872,
+    "audible_hours": 926,
+    "audible_ratio": 0.1901,
     "liquid_p50": 0.8,
-    "liquid_p85": 2.6949999999999936,
+    "liquid_p85": 2.9,
     "liquid_p97": 6.3,
     "liquid_max": 14.5,
-    "events": 227,
+    "events": 200,
     "event_hours_max": 28,
     "event_hours_median": 3.0,
-    "gap_max": 907,
-    "cin_missing_hours": 695,
-    "weather_code_thunder_hours": 348,
+    "gap_max": 403,
+    "cin_missing_hours": 38,
+    "weather_code_thunder_hours": 350,
     "thunder_score_p90": 0.645,
     "thunder_score_p99": 1.0,
     "thunder_score_max": 1.0

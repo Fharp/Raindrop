@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-08-02T15:39:00.434812+00:00",
+  "fetched_at_utc": "2026-08-05T09:12:11.570900+00:00",
   "city": {
     "slug": "tokyo",
     "name": "东京",
@@ -17,12 +17,12 @@
   "model": "ecmwf_ifs",
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
-    "start": "2025-10-01",
-    "end": "2026-08-01"
+    "start": "2026-01-14",
+    "end": "2026-08-04"
   },
   "index_range_utc": {
-    "start": "2025-10-08T12:00",
-    "end": "2026-08-01T23:00"
+    "start": "2026-01-14T00:00",
+    "end": "2026-08-04T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,21 +80,21 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 7140,
-    "audible_hours": 744,
-    "audible_ratio": 0.1042,
-    "liquid_p50": 0.8,
-    "liquid_p85": 2.6,
-    "liquid_p97": 6.379999999999996,
+    "hours": 4872,
+    "audible_hours": 609,
+    "audible_ratio": 0.125,
+    "liquid_p50": 0.9,
+    "liquid_p85": 2.7,
+    "liquid_p97": 6.4,
     "liquid_max": 27.4,
-    "events": 138,
+    "events": 106,
     "event_hours_max": 27,
     "event_hours_median": 3.0,
-    "gap_max": 876,
-    "cin_missing_hours": 815,
-    "weather_code_thunder_hours": 35,
-    "thunder_score_p90": 0.10999999999999999,
-    "thunder_score_p99": 0.538128,
+    "gap_max": 250,
+    "cin_missing_hours": 635,
+    "weather_code_thunder_hours": 42,
+    "thunder_score_p90": 0.13612999999999997,
+    "thunder_score_p99": 0.5400999999999999,
     "thunder_score_max": 1.0
   },
   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."

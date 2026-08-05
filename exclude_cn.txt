@@ -1,0 +1,24 @@
+# 排除清单。一行一条，slug / 英文名 / 中文名都认，# 开头是注释。
+# 你贴的复核清单里，这些不是独立城市：
+
+# 香港的区（香港本身已在名册里）
+Tuen Mun
+Tai Po
+Sai Kung
+Yuen Long
+Sha Tin
+Tsuen Wan
+Kwai Chung
+Tseung Kwan O
+Kowloon
+Victoria
+
+# 拉萨的市辖区与下辖县
+Chengguan Qu
+Lhuenzhub
+
+# 台南市的区，不是独立城市
+Xinying
+
+# 与已有条目重复
+Haikou

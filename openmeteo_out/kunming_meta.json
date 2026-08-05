@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-08-02T15:31:29.117028+00:00",
+  "fetched_at_utc": "2026-08-05T08:54:33.875540+00:00",
   "city": {
     "slug": "kunming",
     "name": "昆明",
@@ -17,12 +17,12 @@
   "model": "ecmwf_ifs",
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
-    "start": "2025-10-01",
-    "end": "2026-08-01"
+    "start": "2026-01-14",
+    "end": "2026-08-04"
   },
   "index_range_utc": {
-    "start": "2025-10-08T12:00",
-    "end": "2026-08-01T23:00"
+    "start": "2026-01-14T00:00",
+    "end": "2026-08-04T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,21 +80,21 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 7140,
-    "audible_hours": 852,
-    "audible_ratio": 0.1193,
-    "liquid_p50": 0.6,
+    "hours": 4872,
+    "audible_hours": 684,
+    "audible_ratio": 0.1404,
+    "liquid_p50": 0.7,
     "liquid_p85": 1.8,
     "liquid_p97": 4.5,
     "liquid_max": 11.3,
-    "events": 223,
-    "event_hours_max": 54,
+    "events": 176,
+    "event_hours_max": 27,
     "event_hours_median": 3.0,
     "gap_max": 572,
-    "cin_missing_hours": 908,
+    "cin_missing_hours": 689,
     "weather_code_thunder_hours": 88,
-    "thunder_score_p90": 0.22034,
-    "thunder_score_p99": 0.6274159999999998,
+    "thunder_score_p90": 0.23815,
+    "thunder_score_p99": 0.6334299999999997,
     "thunder_score_max": 0.875
   },
   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."

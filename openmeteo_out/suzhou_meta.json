@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-08-02T15:34:10.887064+00:00",
+  "fetched_at_utc": "2026-08-05T09:01:17.562925+00:00",
   "city": {
     "slug": "suzhou",
     "name": "苏州",
@@ -17,12 +17,12 @@
   "model": "ecmwf_ifs",
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
-    "start": "2025-10-01",
-    "end": "2026-08-01"
+    "start": "2026-01-14",
+    "end": "2026-08-04"
   },
   "index_range_utc": {
-    "start": "2025-10-08T12:00",
-    "end": "2026-08-01T23:00"
+    "start": "2026-01-14T00:00",
+    "end": "2026-08-04T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,21 +80,21 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 7140,
-    "audible_hours": 677,
-    "audible_ratio": 0.0948,
-    "liquid_p50": 0.7,
-    "liquid_p85": 1.7600000000000022,
-    "liquid_p97": 3.272000000000003,
+    "hours": 4872,
+    "audible_hours": 619,
+    "audible_ratio": 0.1271,
+    "liquid_p50": 0.8,
+    "liquid_p85": 1.8000000000000003,
+    "liquid_p97": 3.1380000000000106,
     "liquid_max": 10.3,
-    "events": 135,
+    "events": 115,
     "event_hours_max": 37,
     "event_hours_median": 3.0,
-    "gap_max": 840,
-    "cin_missing_hours": 1489,
-    "weather_code_thunder_hours": 76,
-    "thunder_score_p90": 0.1924,
-    "thunder_score_p99": 0.4427,
+    "gap_max": 279,
+    "cin_missing_hours": 240,
+    "weather_code_thunder_hours": 73,
+    "thunder_score_p90": 0.18743999999999994,
+    "thunder_score_p99": 0.45069800000000027,
     "thunder_score_max": 0.59
   },
   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."

@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-08-02T15:28:49.609981+00:00",
+  "fetched_at_utc": "2026-08-05T08:48:07.149887+00:00",
   "city": {
     "slug": "shenyang",
     "name": "沈阳",
@@ -17,12 +17,12 @@
   "model": "ecmwf_ifs",
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
-    "start": "2025-10-01",
-    "end": "2026-08-01"
+    "start": "2026-01-14",
+    "end": "2026-08-04"
   },
   "index_range_utc": {
-    "start": "2025-10-08T12:00",
-    "end": "2026-08-01T23:00"
+    "start": "2026-01-14T00:00",
+    "end": "2026-08-04T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,21 +80,21 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 7140,
-    "audible_hours": 386,
-    "audible_ratio": 0.0541,
-    "liquid_p50": 0.9,
-    "liquid_p85": 3.3699999999999988,
-    "liquid_p97": 8.307999999999993,
+    "hours": 4872,
+    "audible_hours": 377,
+    "audible_ratio": 0.0774,
+    "liquid_p50": 1.0,
+    "liquid_p85": 3.4,
+    "liquid_p97": 8.350000000000001,
     "liquid_max": 32.1,
-    "events": 108,
+    "events": 102,
     "event_hours_max": 26,
     "event_hours_median": 2.0,
-    "gap_max": 1315,
-    "cin_missing_hours": 3163,
-    "weather_code_thunder_hours": 62,
-    "thunder_score_p90": 0.23494000000000004,
-    "thunder_score_p99": 0.7397999999999999,
+    "gap_max": 475,
+    "cin_missing_hours": 1617,
+    "weather_code_thunder_hours": 64,
+    "thunder_score_p90": 0.24287999999999996,
+    "thunder_score_p99": 0.7588000000000003,
     "thunder_score_max": 0.92
   },
   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."

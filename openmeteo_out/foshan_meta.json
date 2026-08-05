@@ -1,5 +1,5 @@
 {
-  "fetched_at_utc": "2026-08-02T15:35:35.670212+00:00",
+  "fetched_at_utc": "2026-08-05T09:04:45.823158+00:00",
   "city": {
     "slug": "foshan",
     "name": "佛山",
@@ -17,12 +17,12 @@
   "model": "ecmwf_ifs",
   "api_host": "https://historical-forecast-api.open-meteo.com/v1/forecast",
   "requested_range_utc": {
-    "start": "2025-10-01",
-    "end": "2026-08-01"
+    "start": "2026-01-14",
+    "end": "2026-08-04"
   },
   "index_range_utc": {
-    "start": "2025-10-08T12:00",
-    "end": "2026-08-01T23:00"
+    "start": "2026-01-14T00:00",
+    "end": "2026-08-04T23:00"
   },
   "variables_fetched": [
     "precipitation",
@@ -80,21 +80,21 @@
     "gap_to_next": "小时；-1 表示本区间内此后不再降水"
   },
   "statistics": {
-    "hours": 7140,
-    "audible_hours": 886,
-    "audible_ratio": 0.1241,
-    "liquid_p50": 0.8,
-    "liquid_p85": 3.1,
-    "liquid_p97": 6.7,
+    "hours": 4872,
+    "audible_hours": 850,
+    "audible_ratio": 0.1745,
+    "liquid_p50": 0.9,
+    "liquid_p85": 3.264999999999998,
+    "liquid_p97": 6.952999999999998,
     "liquid_max": 12.2,
-    "events": 230,
+    "events": 208,
     "event_hours_max": 26,
     "event_hours_median": 3.0,
-    "gap_max": 540,
-    "cin_missing_hours": 771,
-    "weather_code_thunder_hours": 302,
-    "thunder_score_p90": 0.61132,
-    "thunder_score_p99": 0.9643999999999997,
+    "gap_max": 251,
+    "cin_missing_hours": 37,
+    "weather_code_thunder_hours": 307,
+    "thunder_score_p90": 0.6146,
+    "thunder_score_p99": 0.9635000000000005,
     "thunder_score_max": 1.0
   },
   "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), based on ECMWF IFS HRES."

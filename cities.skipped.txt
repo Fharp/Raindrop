@@ -1,0 +1,17 @@
+
+# 以下这些**已经收进来了**，只是离邻居较近（< 30 km），列出来供复核。
+# 如果确认其中某两条其实是同一座城，从 cities.json 里手工删掉一条即可。
+# 列的含义：英文名 / 中文名 / GeoNames 层级 / 人口 / 离谁多远
+# PPLA=省级驻地 PPLA2=地级驻地 PPLA3=县级驻地 PPLX=市辖区
+Chaozhou, CN             潮州市        PPLA2  1750945    距 jieyang 29 km
+Jinzhong, CN             Jinzhong   PPLA2  1226617    距 taiyuan 28 km
+Xiangtan, CN             湘潭市        PPLA2  959303     距 zhuzhou 25 km
+E'zhou, CN               鄂州市        PPLA2  668727     距 huangshi 23 km
+Taoyuan, TW              桃園區        PPLA2  475798     距 taipei 27 km
+Keelung, TW              Keelung    PPLA2  362487     距 taipei 21 km
+Jiayuguan, CN            嘉峪关市       PPLA2  231853     距 jiuquan 21 km
+Chang-hua, TW            彰化         PPLA2  226564     距 taichung 15 km
+Douliu, TW               斗六市        PPLA2  107924     距 chiayicity 27 km
+Nantou, TW               南投         PPLA2  105682     距 taichung 26 km
+Taibao, TW               太保         PPLA2  38696      距 chiayicity 12 km
+Jincheng, TW             金城         PPLA   37507      距 xiamen 24 km
