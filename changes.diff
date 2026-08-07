@@ -1,8 +1,8 @@
 diff --git a/404.html b/404.html
-index b7538f8..ae5bbc7 100644
+index b7538f8..aa29a53 100644
 --- a/404.html
 +++ b/404.html
-@@ -5,10 +5,18 @@
+@@ -5,6 +5,13 @@
  <meta name="viewport" content="width=device-width,initial-scale=1">
  <title>雨窗</title>
  <style>
@@ -16,57 +16,11 @@ index b7538f8..ae5bbc7 100644
  html,body{margin:0;height:100%;background:#05080a;color:rgba(255,255,255,.7);
    display:flex;align-items:center;justify-content:center;
    font:300 clamp(16px,1.6vw,22px)/1.6 "Noto Serif SC","Songti SC",serif;letter-spacing:.16em}
-+a{color:inherit;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.3)}
- </style>
- </head>
--<body>这里是空的。</body>
-+<body><a href="/">这里是空的。</a></body>
- </html>
 diff --git a/index.html b/index.html
-index 31c862d..cce2bb2 100644
+index 31c862d..29701d4 100644
 --- a/index.html
 +++ b/index.html
-@@ -75,6 +75,12 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
- #picker.on{opacity:1;transform:none;pointer-events:auto}
- #pickerList{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.4em,1fr));gap:2px}
- 
-+#locate{
-+  width:100%;margin:0 0 9px;padding-bottom:.62em;
-+  border-bottom:1px solid rgba(255,255,255,.14);
-+}
-+#locate:disabled{opacity:.4;cursor:default}
-+
- .city{
-   display:flex;align-items:center;gap:.5em;
-   padding:.42em .5em;border:0;background:none;cursor:pointer;text-align:left;
-@@ -129,6 +135,26 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
- }
- #drawer.on{transform:none}
- 
-+#drawerBody h1{
-+  margin:0 0 1.4em;font-size:1.5em;font-weight:300;
-+  letter-spacing:.3em;line-height:1.3;
-+}
-+#drawerBody h2{
-+  margin:2.2em 0 .5em;font-size:.82em;font-weight:300;
-+  letter-spacing:.34em;opacity:.5;
-+}
-+#drawerBody p{margin:0 0 1.1em;opacity:.86}
-+#drawerBody ul{margin:0;padding:0;list-style:none}
-+#drawerBody li{margin:0 0 .34em;opacity:.86;text-indent:-1.1em;padding-left:1.1em}
-+#drawerBody a{
-+  color:inherit;text-decoration:none;
-+  border-bottom:1px solid rgba(255,255,255,.28);
-+  transition:border-color .25s;
-+}
-+#drawerBody a:hover,#drawerBody a:focus-visible{border-bottom-color:rgba(255,255,255,.8)}
-+#drawerBody a:focus-visible{outline:0}
-+#drawerBody .note{margin-top:2.6em;font-size:.86em;opacity:.42;line-height:1.8}
-+
- #play{
-   position:fixed;left:50%;top:62%;transform:translate(-50%,-50%);z-index:3;
-   padding:.72em 1.72em .72em 2.28em;
-@@ -183,14 +209,18 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
+@@ -183,14 +183,15 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
  
  <div id="caption">
    <div id="head">
@@ -80,86 +34,11 @@ index 31c862d..cce2bb2 100644
  
  <!-- 城市下拉。列表由 rain_menu 依名册生成，加城市不用改这里 -->
 -<div id="picker" role="listbox" aria-label="城市"><div id="pickerList"></div></div>
-+<div id="picker">
-+  <button id="locate" type="button" class="city locate">此处</button>
-+  <div id="pickerList" role="listbox" aria-label="城市"></div>
-+</div>
++<div id="picker"><div id="pickerList" role="listbox" aria-label="城市"></div></div>
  
  <button id="play" class="loading" disabled>聆听</button>
  
-@@ -200,7 +230,46 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
- <div id="scrim"></div>
- <aside id="drawer" aria-label="面板">
-   <div id="drawerBody">
--    <!-- 内容写在这里。「关于」之类晚点补，样式沿用 #drawer 上定好的那套。 -->
-+    <h1>雨窗</h1>
-+
-+    <p>这里的每一场雨都真的下过。逐小时的降水、风与雷电取自公开的再分析数据，
-+       在浏览器里按谱实时混音。钟点对齐到世界时的当日时刻，
-+       所以你听见的是那座城市此刻的雨。</p>
-+
-+    <h2>数据</h2>
-+    <ul>
-+      <li>天气 · <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
-+          （CC BY 4.0），基于 ECMWF IFS HRES</li>
-+      <li>坐标 · <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>
-+          （CC BY 4.0）</li>
-+    </ul>
-+
-+    <h2>声音</h2>
-+    <ul>
-+      <li>雨与风 · <a href="https://pixabay.com/sound-effects/" target="_blank" rel="noopener noreferrer">Pixabay</a>：
-+          soundsforyou、u_dui2p5vt45、adsabbhelp、freesound_community、restfuldreamingtunes</li>
-+      <li>雷 · <a href="https://freesound.org/" target="_blank" rel="noopener noreferrer">Freesound</a>：
-+          trp、fran_marenco</li>
-+    </ul>
-+
-+    <h2>图与字</h2>
-+    <ul>
-+      <li>底图 · <a href="https://pixabay.com/" target="_blank" rel="noopener noreferrer">Pixabay</a>：sakmei</li>
-+      <li>思源宋体 Noto Serif SC · SIL Open Font License 1.1</li>
-+    </ul>
-+
-+    <h2>渲染</h2>
-+    <ul>
-+      <li><a href="https://github.com/SardineFish/raindrop-fx" target="_blank" rel="noopener noreferrer">raindrop-fx</a>
-+          · SardineFish · MIT</li>
-+    </ul>
-+
-+    <p class="note">空格 播放与静音　D 换一场　方括号 前后场次　方向键 快进退</p>
-+
-+    <!-- TODO：Freesound 上每条声音的授权是逐条不同的（CC0 / CC BY / CC BY-NC）。
-+         到 freesound.org/s/572443 与 freesound.org/s/796529 核对之后，
-+         把具体的许可名字补进上面的「雷」那一条。若其中有 CC BY-NC，商用会受限。
-+         MIT 要求随分发保留许可全文：把上游的 LICENSE 拷进 bundle/。 -->
-   </div>
- </aside>
- 
-@@ -445,6 +514,7 @@ RainAudio.create({
-   if (typeof RainMenu !== "undefined") {
-     picker = RainMenu.attachCityPicker({
-       button: $("#place"), panel: $("#picker"), list: $("#pickerList"),
-+      locate: $("#locate"),
-       roster: a.roster,
- 
-       wetOf: slug => wetAt(slug, new Date().getUTCHours()),
-@@ -452,6 +522,15 @@ RainAudio.create({
-         if (caption) caption.setPlace(c.name);
-         tune(shape(c), { fresh: true });
-       },
-+
-+      // 页面加载时不再擅自弹定位授权框，改到这里——一次明确的用户手势
-+      onLocate: async () => {
-+        if (typeof RainPlace === "undefined") return;
-+        const p = await RainPlace.locate(a.roster);
-+        if (!p) return;
-+        if (caption) caption.setPlace(p.name);
-+        await tune(shape(p), { fresh: true });
-+      },
-     });
-   }
- 
-@@ -504,8 +583,9 @@ async function loadBackground(cands) {
+@@ -504,8 +505,9 @@ async function loadBackground(cands) {
  
  try {
    stage = "取底图";
@@ -171,7 +50,7 @@ index 31c862d..cce2bb2 100644
    if (DEBUG) console.debug("[rain] 底图", bg.url, bg.data.width + "×" + bg.data.height);
  
 diff --git a/make_font_subset.py b/make_font_subset.py
-index f667808..a7239dc 100644
+index f667808..3864238 100644
 --- a/make_font_subset.py
 +++ b/make_font_subset.py
 @@ -1,14 +1,16 @@
@@ -196,12 +75,11 @@ index f667808..a7239dc 100644
  
  字体来源：https://github.com/google/fonts/tree/main/ofl/notoserifsc
  许可：SIL Open Font License 1.1，且**没有**声明保留字体名，
-@@ -18,10 +20,12 @@
+@@ -18,10 +20,11 @@
  import argparse
  import json
  import pathlib
 +import re
-+import string
  import subprocess
  import sys
  
@@ -210,17 +88,8 @@ index f667808..a7239dc 100644
  FIXED = (
      "零〇一二三四五六七八九十"      # 汉字数字（〇 备用，想换年份写法时不必重新生成）
      "年月日"
-@@ -29,17 +33,44 @@ FIXED = (
-     "地球某处"                      # 定位取不到时左上角写的那四个字
-     "的下一场雨将在小时后开始"      # 那座城没在下雨时第二行的句式
-     "聆听静音"
--    "，。、·"
--    "0123456789:"
-+    "此处"                          # 城市下拉顶上那个「用我的位置」入口
-+    "，。、·—　"
-+    + string.ascii_letters          # 抽屉里的许可与来源文字要用到拉丁字母
-+    + string.digits
-+    + "()（）[]【】{}<>《》:：;；.,!?！？'\"“”‘’/\\|@#$%^&*-_=+~`"
+@@ -33,13 +36,36 @@ FIXED = (
+     "0123456789:"
  )
  
 +# 从 HTML 里抽出真正会被渲染的文字：先剥掉注释、script、style，再剥标签。
@@ -254,11 +123,10 @@ index f667808..a7239dc 100644
 +            # 跳过控制字符与空白，其余一律收进来
 +            if ch.isprintable() and not ch.isspace():
 +                chars.add(ch)
-+    chars.add("\u3000")   # 全角空格，抽屉最后那行快捷键说明在用
      return "".join(sorted(chars))
  
  
-@@ -47,6 +78,9 @@ def main() -> int:
+@@ -47,6 +73,9 @@ def main() -> int:
      ap = argparse.ArgumentParser()
      ap.add_argument("--font", required=True, help="源字体（.ttf / .otf，可变字体亦可）")
      ap.add_argument("--roster", default="web_out/index/cities.json")
@@ -268,7 +136,7 @@ index f667808..a7239dc 100644
      ap.add_argument("--out", default="fonts/NotoSerifSC-rain.woff2")
      ap.add_argument("--weight", type=int, default=None,
                      help="把可变字体固定到某一档字重（如 300）。体积能再小一半，"
-@@ -59,7 +93,7 @@ def main() -> int:
+@@ -59,7 +88,7 @@ def main() -> int:
          print(f"找不到名册：{roster}", file=sys.stderr)
          return 1
  
@@ -433,18 +301,10 @@ index 458f122..d0f70a0 100644
  
    _setWindLfo(fr, when) {
 diff --git a/rain_menu.js b/rain_menu.js
-index 5116dc2..8ef52b6 100644
+index 5116dc2..d332ade 100644
 --- a/rain_menu.js
 +++ b/rain_menu.js
-@@ -9,6 +9,7 @@ const anyOpen = () => openCount > 0;
- 
- function attachCityPicker(o) {
-   const btn = o.button, panel = o.panel, list = o.list;
-+  const locateBtn = o.locate || null;
-   let open = false, built = false, current = null;
- 
-   function cities() {
-@@ -23,6 +24,8 @@ function attachCityPicker(o) {
+@@ -23,6 +23,8 @@ function attachCityPicker(o) {
        const it = doc.createElement("button");
        it.type = "button";
        it.className = "city";
@@ -453,7 +313,7 @@ index 5116dc2..8ef52b6 100644
        it.dataset.slug = c.slug;
        const dot = doc.createElement("i");
        const nm  = doc.createElement("span");
-@@ -42,9 +45,11 @@ function attachCityPicker(o) {
+@@ -42,9 +44,11 @@ function attachCityPicker(o) {
    function mark() {
      for (const it of list.children) {
        const w = o.wetOf ? o.wetOf(it.dataset.slug) : null;
@@ -466,106 +326,11 @@ index 5116dc2..8ef52b6 100644
      }
    }
  
-@@ -74,6 +79,16 @@ function attachCityPicker(o) {
-     btn.setAttribute("aria-expanded", "false");
-   }
- 
-+  // 「此处」——唯一会触发定位授权框的入口，且必然由一次用户手势产生
-+  if (locateBtn && o.onLocate) {
-+    locateBtn.addEventListener("click", async e => {
-+      e.stopPropagation();
-+      locateBtn.disabled = true;
-+      try { await o.onLocate(); } finally { locateBtn.disabled = false; }
-+      hide();
-+    });
-+  }
-+
-   btn.addEventListener("click", e => { e.stopPropagation(); open ? hide() : show(); });
-   btn.addEventListener("keydown", e => {
-     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); open ? hide() : show(); }
 diff --git a/rain_place.js b/rain_place.js
-index 861a95e..965e951 100644
+index 861a95e..04830c1 100644
 --- a/rain_place.js
 +++ b/rain_place.js
-@@ -7,6 +7,16 @@ const CFG = {
-   geoMaxAgeMs:   1800000,
-   live:          true,
-   deadlineMs:    9000,
-+
-+  // 页面刚打开时不主动弹定位授权框。
-+  // 没有用户手势的权限请求，Chrome 会降级成静默 UI，多数人根本看不到；
-+  // 对第一次来的访客也是一个没有任何上下文的打扰。
-+  //
-+  // 已经授权过的人（permissions 状态是 granted）照旧直接用，不会弹框。
-+  // 没授权过的人，在城市下拉里点「此处」时才问——那是一次真正的用户手势。
-+  //
-+  // 想恢复旧行为，把这个改成 true。
-+  askOnLoad: false,
- };
- 
- const RADIUS_KM = 6371.0088;
-@@ -45,21 +55,31 @@ function nearest(roster, lat, lon) {
- 
- function pick(arr) { return arr.length ? arr[(Math.random() * arr.length) | 0] : null; }
- 
--function position() {
--  return new Promise((ok, no) => {
--    const nav = global.navigator;
--    if (!nav || !nav.geolocation) { no(new Error("没有 geolocation")); return; }
-+// "granted" / "denied" / "prompt" / "unknown"
-+// Safari 一度不支持在 permissions.query 里查 geolocation，那里会落到 unknown。
-+async function permissionState() {
-+  const nav = global.navigator;
-+  if (!nav || !nav.permissions || !nav.permissions.query) return "unknown";
-+  try {
-+    const s = await nav.permissions.query({ name: "geolocation" });
-+    return s.state;
-+  } catch (e) { return "unknown"; }
-+}
- 
--    const ask = () => nav.geolocation.getCurrentPosition(
--      p  => ok({ lat: p.coords.latitude, lon: p.coords.longitude }),
--      e  => no(new Error("定位失败 code=" + (e && e.code))),
--      { enableHighAccuracy: false, timeout: CFG.geoTimeoutMs, maximumAge: CFG.geoMaxAgeMs });
-+// force 为真时允许弹授权框；为假时只在已经授权过的情况下取坐标。
-+async function position(force) {
-+  const nav = global.navigator;
-+  if (!nav || !nav.geolocation) throw new Error("没有 geolocation");
-+
-+  const st = await permissionState();
-+  if (st === "denied") throw new Error("定位权限已拒绝");
-+  if (st !== "granted" && !force) throw new Error("未授权，此刻不该弹框");
- 
--    if (nav.permissions && nav.permissions.query) {
--      nav.permissions.query({ name: "geolocation" })
--        .then(s => { s.state === "denied" ? no(new Error("定位权限已拒绝")) : ask(); })
--        .catch(ask);
--    } else ask();
-+  return new Promise((ok, no) => {
-+    nav.geolocation.getCurrentPosition(
-+      p => ok({ lat: p.coords.latitude, lon: p.coords.longitude }),
-+      e => no(new Error("定位失败 code=" + (e && e.code))),
-+      { enableHighAccuracy: false, timeout: CFG.geoTimeoutMs, maximumAge: CFG.geoMaxAgeMs });
-   });
- }
- 
-@@ -71,10 +91,13 @@ function playableNow(roster) {
-   return list(roster).filter(c => ok.has(c.slug));
- }
- 
--function resolve(roster) {
-+// opts.force：由用户手势触发，允许弹授权框
-+function resolve(roster, opts) {
-+  const force = !!(opts && opts.force);
-+
-   const chain = (async () => {
-     try {
--      const p = await position();
-+      const p = await position(force || CFG.askOnLoad);
-       const c = nearest(roster, p.lat, p.lon);
-       if (c) return Object.assign(c, { source: "geolocation" });
-     } catch (e) {  }
-@@ -88,14 +111,28 @@ function resolve(roster) {
+@@ -88,12 +88,16 @@ function resolve(roster) {
      return c ? Object.assign({}, c, { distanceKm: 0, source: "random" }) : null;
    })();
  
@@ -580,23 +345,10 @@ index 861a95e..965e951 100644
 +      ok(c ? Object.assign({}, c, { distanceKm: 0, source: "random" }) : null);
 +    }, CFG.deadlineMs);
 +  });
-+
-+  // 这个 timer 原来从不清除
-+  return Promise.race([chain, fallback]).finally(() => clearTimeout(id));
-+}
  
 -  return Promise.race([chain, fallback]);
-+// 用户手势路径：允许弹授权框。取不到就返回 null，不做随机兜底——
-+// 用户明确点了「此处」，塞一个随机城市给他是答非所问。
-+async function locate(roster) {
-+  try {
-+    const p = await position(true);
-+    const c = nearest(roster, p.lat, p.lon);
-+    return c ? Object.assign(c, { source: "geolocation" }) : null;
-+  } catch (e) { return null; }
++  // 唯一的改动：chain 先赢时把这个 timer 清掉，原来它从不清除
++  return Promise.race([chain, fallback]).finally(() => clearTimeout(id));
  }
  
--global.RainPlace = { CFG, resolve, nearest, distanceKm, list };
-+global.RainPlace = { CFG, resolve, locate, nearest, distanceKm, list, permissionState };
- 
- })(typeof window !== "undefined" ? window : globalThis);
+ global.RainPlace = { CFG, resolve, nearest, distanceKm, list };

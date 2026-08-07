@@ -9,7 +9,6 @@ const anyOpen = () => openCount > 0;
 
 function attachCityPicker(o) {
   const btn = o.button, panel = o.panel, list = o.list;
-  const locateBtn = o.locate || null;
   let open = false, built = false, current = null;
 
   function cities() {
@@ -77,16 +76,6 @@ function attachCityPicker(o) {
     open = false; openCount = Math.max(0, openCount - 1);
     panel.classList.remove("on");
     btn.setAttribute("aria-expanded", "false");
-  }
-
-  // 「此处」——唯一会触发定位授权框的入口，且必然由一次用户手势产生
-  if (locateBtn && o.onLocate) {
-    locateBtn.addEventListener("click", async e => {
-      e.stopPropagation();
-      locateBtn.disabled = true;
-      try { await o.onLocate(); } finally { locateBtn.disabled = false; }
-      hide();
-    });
   }
 
   btn.addEventListener("click", e => { e.stopPropagation(); open ? hide() : show(); });

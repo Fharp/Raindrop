@@ -21,7 +21,6 @@ import argparse
 import json
 import pathlib
 import re
-import string
 import subprocess
 import sys
 
@@ -33,11 +32,8 @@ FIXED = (
     "地球某处"                      # 定位取不到时左上角写的那四个字
     "的下一场雨将在小时后开始"      # 那座城没在下雨时第二行的句式
     "聆听静音"
-    "此处"                          # 城市下拉顶上那个「用我的位置」入口
-    "，。、·—　"
-    + string.ascii_letters          # 抽屉里的许可与来源文字要用到拉丁字母
-    + string.digits
-    + "()（）[]【】{}<>《》:：;；.,!?！？'\"“”‘’/\\|@#$%^&*-_=+~`"
+    "，。、·"
+    "0123456789:"
 )
 
 # 从 HTML 里抽出真正会被渲染的文字：先剥掉注释、script、style，再剥标签。
@@ -70,7 +66,6 @@ def charset(roster_path: pathlib.Path, html_paths) -> str:
             # 跳过控制字符与空白，其余一律收进来
             if ch.isprintable() and not ch.isspace():
                 chars.add(ch)
-    chars.add("\u3000")   # 全角空格，抽屉最后那行快捷键说明在用
     return "".join(sorted(chars))
 
 
