@@ -6,7 +6,7 @@
 
 ```
 rain_audio.js       五处 bug
-index.html          删掉不存在的 1.jpg；两处 aria
+index.html          抽屉内容（关于）；删掉不存在的 1.jpg；两处 aria
 rain_menu.js        列表项补 role="option" / aria-selected
 rain_place.js       只改了一行：清掉那个从不清除的 9s timer
 .gitignore          原来只有一行 sound_orig/
@@ -19,12 +19,14 @@ tools/prune-repo.sh 剪仓库用，破坏性，脚本自己会解释并要求确
 _headers                        CSP、Permissions-Policy、缓存策略
 404.html                        只加了 @font-face —— 原来那里写了
                                 font-family:"Noto Serif SC" 但字体根本没加载
-fonts/NotoSerifSC-rain.woff2    重新生成，177 字（原 160），多出来的
-                                是 404.html 上那几个
 make_font_subset.py             字表改成自动扫 HTML，不用手动维护 FIXED
 ```
 
-`404.html` / `fonts/` / `make_font_subset.py` 三个是一套，要就一起要。
+## 字体子集是必须换的
+
+`fonts/NotoSerifSC-rain.woff2` 已重新生成，205 字（原 160），88 KB。
+抽屉里「关于」那段话的字原子集里没有，不换的话那些字会掉到系统回退字体上。
+逐字复核过，205 字全覆盖，缺失 0。
 
 ## 另外，仓库根目录那个字体文件是坏的
 
