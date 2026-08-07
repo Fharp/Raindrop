@@ -75,6 +75,12 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 #picker.on{opacity:1;transform:none;pointer-events:auto}
 #pickerList{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.4em,1fr));gap:2px}
 
+#locate{
+  width:100%;margin:0 0 9px;padding-bottom:.62em;
+  border-bottom:1px solid rgba(255,255,255,.14);
+}
+#locate:disabled{opacity:.4;cursor:default}
+
 .city{
   display:flex;align-items:center;gap:.5em;
   padding:.42em .5em;border:0;background:none;cursor:pointer;text-align:left;
@@ -128,6 +134,26 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
   transition:transform .46s cubic-bezier(.22,.61,.36,1);
 }
 #drawer.on{transform:none}
+
+#drawerBody h1{
+  margin:0 0 1.4em;font-size:1.5em;font-weight:300;
+  letter-spacing:.3em;line-height:1.3;
+}
+#drawerBody h2{
+  margin:2.2em 0 .5em;font-size:.82em;font-weight:300;
+  letter-spacing:.34em;opacity:.5;
+}
+#drawerBody p{margin:0 0 1.1em;opacity:.86}
+#drawerBody ul{margin:0;padding:0;list-style:none}
+#drawerBody li{margin:0 0 .34em;opacity:.86;text-indent:-1.1em;padding-left:1.1em}
+#drawerBody a{
+  color:inherit;text-decoration:none;
+  border-bottom:1px solid rgba(255,255,255,.28);
+  transition:border-color .25s;
+}
+#drawerBody a:hover,#drawerBody a:focus-visible{border-bottom-color:rgba(255,255,255,.8)}
+#drawerBody a:focus-visible{outline:0}
+#drawerBody .note{margin-top:2.6em;font-size:.86em;opacity:.42;line-height:1.8}
 
 #play{
   position:fixed;left:50%;top:62%;transform:translate(-50%,-50%);z-index:3;
@@ -183,14 +209,18 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 
 <div id="caption">
   <div id="head">
-    <span id="place" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false"></span>
+    <span id="place" role="button" tabindex="0" aria-haspopup="listbox"
+          aria-controls="pickerList" aria-expanded="false"></span>
     <span id="clock"></span>
   </div>
   <div id="line"></div>
 </div>
 
 <!-- 城市下拉。列表由 rain_menu 依名册生成，加城市不用改这里 -->
-<div id="picker" role="listbox" aria-label="城市"><div id="pickerList"></div></div>
+<div id="picker">
+  <button id="locate" type="button" class="city locate">此处</button>
+  <div id="pickerList" role="listbox" aria-label="城市"></div>
+</div>
 
 <button id="play" class="loading" disabled>聆听</button>
 
@@ -200,7 +230,46 @@ html,body{margin:0;height:100%;background:#05080a;overflow:hidden}
 <div id="scrim"></div>
 <aside id="drawer" aria-label="面板">
   <div id="drawerBody">
-    <!-- 内容写在这里。「关于」之类晚点补，样式沿用 #drawer 上定好的那套。 -->
+    <h1>雨窗</h1>
+
+    <p>这里的每一场雨都真的下过。逐小时的降水、风与雷电取自公开的再分析数据，
+       在浏览器里按谱实时混音。钟点对齐到世界时的当日时刻，
+       所以你听见的是那座城市此刻的雨。</p>
+
+    <h2>数据</h2>
+    <ul>
+      <li>天气 · <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
+          （CC BY 4.0），基于 ECMWF IFS HRES</li>
+      <li>坐标 · <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>
+          （CC BY 4.0）</li>
+    </ul>
+
+    <h2>声音</h2>
+    <ul>
+      <li>雨与风 · <a href="https://pixabay.com/sound-effects/" target="_blank" rel="noopener noreferrer">Pixabay</a>：
+          soundsforyou、u_dui2p5vt45、adsabbhelp、freesound_community、restfuldreamingtunes</li>
+      <li>雷 · <a href="https://freesound.org/" target="_blank" rel="noopener noreferrer">Freesound</a>：
+          trp、fran_marenco</li>
+    </ul>
+
+    <h2>图与字</h2>
+    <ul>
+      <li>底图 · <a href="https://pixabay.com/" target="_blank" rel="noopener noreferrer">Pixabay</a>：sakmei</li>
+      <li>思源宋体 Noto Serif SC · SIL Open Font License 1.1</li>
+    </ul>
+
+    <h2>渲染</h2>
+    <ul>
+      <li><a href="https://github.com/SardineFish/raindrop-fx" target="_blank" rel="noopener noreferrer">raindrop-fx</a>
+          · SardineFish · MIT</li>
+    </ul>
+
+    <p class="note">空格 播放与静音　D 换一场　方括号 前后场次　方向键 快进退</p>
+
+    <!-- TODO：Freesound 上每条声音的授权是逐条不同的（CC0 / CC BY / CC BY-NC）。
+         到 freesound.org/s/572443 与 freesound.org/s/796529 核对之后，
+         把具体的许可名字补进上面的「雷」那一条。若其中有 CC BY-NC，商用会受限。
+         MIT 要求随分发保留许可全文：把上游的 LICENSE 拷进 bundle/。 -->
   </div>
 </aside>
 
@@ -445,12 +514,22 @@ RainAudio.create({
   if (typeof RainMenu !== "undefined") {
     picker = RainMenu.attachCityPicker({
       button: $("#place"), panel: $("#picker"), list: $("#pickerList"),
+      locate: $("#locate"),
       roster: a.roster,
 
       wetOf: slug => wetAt(slug, new Date().getUTCHours()),
       onPick: c => {
         if (caption) caption.setPlace(c.name);
         tune(shape(c), { fresh: true });
+      },
+
+      // 页面加载时不再擅自弹定位授权框，改到这里——一次明确的用户手势
+      onLocate: async () => {
+        if (typeof RainPlace === "undefined") return;
+        const p = await RainPlace.locate(a.roster);
+        if (!p) return;
+        if (caption) caption.setPlace(p.name);
+        await tune(shape(p), { fresh: true });
       },
     });
   }
@@ -504,8 +583,9 @@ async function loadBackground(cands) {
 
 try {
   stage = "取底图";
+  // 1.jpg 从来没进过仓库，却排在候选第一位——每次开页都先白吃一个 404
   const bg = await loadBackground([
-    q.get("img"), "1.jpg", "future_sakmei-doomsday-style-7715286_1920.jpg",
+    q.get("img"), "future_sakmei-doomsday-style-7715286_1920.jpg",
   ]);
   if (DEBUG) console.debug("[rain] 底图", bg.url, bg.data.width + "×" + bg.data.height);
 

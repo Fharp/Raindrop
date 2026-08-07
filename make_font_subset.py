@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""按名册生成页面用的字体子集。
+"""按名册与页面文案生成字体子集。
 
-页面上会出现的字只有三类：名册里的城市名、汉字数字与「年月日」、
-以及两行里那几个固定字。全字库的思源宋体有几 MB，子集下来通常在 30 KB 上下。
+字表有三个来源，都是现读的，没有写死：
+  1. cities.json 里的城市名与 slug
+  2. index.html / 404.html 里真正会被渲染的文字（script、style、注释已剥掉）
+  3. 本文件里的 FIXED —— 只放由 JS 拼出来、不出现在 HTML 里的那些字
 
-以后加城市，重跑一次这个脚本就行——字表是从 cities.json 现读的，没有写死。
+所以加城市、改抽屉文案之后，重跑一次这个脚本就行。
 
 用法：
     pip install fonttools brotli
-    python make_font_subset.py --font NotoSerifSC[wght].ttf
+    python make_font_subset.py --font "NotoSerifSC[wght].ttf"
 
 字体来源：https://github.com/google/fonts/tree/main/ofl/notoserifsc
 许可：SIL Open Font License 1.1，且**没有**声明保留字体名，
@@ -18,10 +20,12 @@
 import argparse
 import json
 import pathlib
+import re
+import string
 import subprocess
 import sys
 
-# 两行文案里固定出现的字，以及标点、数字、冒号
+# 两行文案里固定出现的字，以及标点、数字
 FIXED = (
     "零〇一二三四五六七八九十"      # 汉字数字（〇 备用，想换年份写法时不必重新生成）
     "年月日"
@@ -29,17 +33,44 @@ FIXED = (
     "地球某处"                      # 定位取不到时左上角写的那四个字
     "的下一场雨将在小时后开始"      # 那座城没在下雨时第二行的句式
     "聆听静音"
-    "，。、·"
-    "0123456789:"
+    "此处"                          # 城市下拉顶上那个「用我的位置」入口
+    "，。、·—　"
+    + string.ascii_letters          # 抽屉里的许可与来源文字要用到拉丁字母
+    + string.digits
+    + "()（）[]【】{}<>《》:：;；.,!?！？'\"“”‘’/\\|@#$%^&*-_=+~`"
 )
 
+# 从 HTML 里抽出真正会被渲染的文字：先剥掉注释、script、style，再剥标签。
+_STRIP = re.compile(
+    r"<!--.*?-->|<script\b[^>]*>.*?</script\s*>|<style\b[^>]*>.*?</style\s*>",
+    re.S | re.I,
+)
+_TAG = re.compile(r"<[^>]+>")
 
-def charset(roster_path: pathlib.Path) -> str:
+
+def html_text(path: pathlib.Path) -> str:
+    """页面上会被排版渲染的文字。script 里那些只出现在 #err 的报错字串用的是
+    等宽字体，不该进子集，所以整段剥掉。"""
+    raw = path.read_text(encoding="utf-8")
+    return _TAG.sub(" ", _STRIP.sub(" ", raw))
+
+
+def charset(roster_path: pathlib.Path, html_paths) -> str:
     doc = json.loads(roster_path.read_text(encoding="utf-8"))
     chars = set(FIXED)
     for city in doc.get("cities", []):
         chars.update(city.get("name") or "")
         chars.update(city.get("slug") or "")      # 万一以后要显示 slug
+    for h in html_paths:
+        h = pathlib.Path(h)
+        if not h.exists():
+            print(f"跳过（不存在）：{h}", file=sys.stderr)
+            continue
+        for ch in html_text(h):
+            # 跳过控制字符与空白，其余一律收进来
+            if ch.isprintable() and not ch.isspace():
+                chars.add(ch)
+    chars.add("\u3000")   # 全角空格，抽屉最后那行快捷键说明在用
     return "".join(sorted(chars))
 
 
@@ -47,6 +78,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--font", required=True, help="源字体（.ttf / .otf，可变字体亦可）")
     ap.add_argument("--roster", default="web_out/index/cities.json")
+    ap.add_argument("--html", nargs="*", default=["index.html", "404.html"],
+                    help="要扫的页面。页面上出现的字会自动并进字表，"
+                         "改了抽屉文案重跑一次即可，不必手动维护 FIXED")
     ap.add_argument("--out", default="fonts/NotoSerifSC-rain.woff2")
     ap.add_argument("--weight", type=int, default=None,
                     help="把可变字体固定到某一档字重（如 300）。体积能再小一半，"
@@ -59,7 +93,7 @@ def main() -> int:
         print(f"找不到名册：{roster}", file=sys.stderr)
         return 1
 
-    text = charset(roster)
+    text = charset(roster, args.html)
     print(f"{len(text)} 个字符：{text}")
     if args.print_only:
         return 0

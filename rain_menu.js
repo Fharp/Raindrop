@@ -9,6 +9,7 @@ const anyOpen = () => openCount > 0;
 
 function attachCityPicker(o) {
   const btn = o.button, panel = o.panel, list = o.list;
+  const locateBtn = o.locate || null;
   let open = false, built = false, current = null;
 
   function cities() {
@@ -23,6 +24,8 @@ function attachCityPicker(o) {
       const it = doc.createElement("button");
       it.type = "button";
       it.className = "city";
+      it.setAttribute("role", "option");
+      it.setAttribute("aria-selected", "false");
       it.dataset.slug = c.slug;
       const dot = doc.createElement("i");
       const nm  = doc.createElement("span");
@@ -42,9 +45,11 @@ function attachCityPicker(o) {
   function mark() {
     for (const it of list.children) {
       const w = o.wetOf ? o.wetOf(it.dataset.slug) : null;
+      const on = it.dataset.slug === current;
       it.classList.toggle("wet", w === true);
       it.classList.toggle("dry", w === false);
-      it.classList.toggle("now", it.dataset.slug === current);
+      it.classList.toggle("now", on);
+      it.setAttribute("aria-selected", on ? "true" : "false");
     }
   }
 
@@ -72,6 +77,16 @@ function attachCityPicker(o) {
     open = false; openCount = Math.max(0, openCount - 1);
     panel.classList.remove("on");
     btn.setAttribute("aria-expanded", "false");
+  }
+
+  // 「此处」——唯一会触发定位授权框的入口，且必然由一次用户手势产生
+  if (locateBtn && o.onLocate) {
+    locateBtn.addEventListener("click", async e => {
+      e.stopPropagation();
+      locateBtn.disabled = true;
+      try { await o.onLocate(); } finally { locateBtn.disabled = false; }
+      hide();
+    });
   }
 
   btn.addEventListener("click", e => { e.stopPropagation(); open ? hide() : show(); });

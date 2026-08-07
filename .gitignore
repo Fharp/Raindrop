@@ -1,1 +1,37 @@
+# ── 构建输入与中间产物 ─────────────────────────────────────
+# 这些是管线的原料，不是站点的一部分。留在本地即可；
+# 它们曾经占了仓库 92% 的文件数和 87% 的体积，还会被原样发布到 Pages 上。
+openmeteo_out/
+openmeteo_out.bak/
 sound_orig/
+cities15000.txt
+cities.json
+cities.skipped.txt
+assets_profile.json
+levels.json
+
+# 思源宋体全字库 25 MB，超过 Cloudflare Pages 单文件 25 MiB 上限，
+# 也没必要进仓库。要重生成子集时从这里取：
+#   https://github.com/google/fonts/tree/main/ofl/notoserifsc
+NotoSerifSC*.ttf
+NotoSerifSC*.otf
+*.pinned.ttf
+
+# ── 系统与工具垃圾 ────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.idea/
+.vscode/
+
+# ── 其它 ─────────────────────────────────────────────────
+*.bak
+*.orig
+*.log
+mnt/

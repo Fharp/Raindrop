@@ -1,0 +1,20 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Cross-Origin-Opener-Policy: same-origin
+  Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=(), usb=(), midi=(), serial=(), bluetooth=()
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self'; media-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+# 音频与字体的内容不会变，变了文件名也会变
+/sound/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/bundle/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 谱子与索引由 rain_audio.js 自己带 ?v= 做版本控制
+/web_out/*
+  Cache-Control: public, max-age=86400

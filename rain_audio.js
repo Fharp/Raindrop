@@ -37,6 +37,7 @@ class RainAudio {
     this.playing = false; this.cursor = 0;
     this._t0 = 0; this._scheduled = -1; this._pumpId = 0; this._rafId = 0;
     this._flashes = [];
+    this._thunder = [];
     this._levelBuf = null; this._level = 0;
     this._pending = new Map();
     this._fmt = null;
@@ -61,17 +62,18 @@ class RainAudio {
 
     const opt = { cache: "force-cache" };
 
-    if (this.preferOpus && this._fmt !== "orig") {
+    // 每个素材各探各的。旧版把探测结果写进 this._fmt 当全局闩：
+    // 只要有一个素材没有 .opus 兄弟文件，之后所有素材都会退回 mp3/flac。
+    if (this.preferOpus) {
       const alt = path.replace(/\.[^./]+$/, ".opus");
       if (alt !== path) {
-        const r = await fetch(this.root + alt, opt);
-
-        if (r.ok) {
-          const buf = await r.arrayBuffer();
-          if (RainAudio._sniff(buf) === "ogg") { this._fmt = "opus"; return buf; }
-        }
-
-        if (this._fmt !== "opus") this._fmt = "orig";
+        try {
+          const r = await fetch(this.root + alt, opt);
+          if (r.ok) {
+            const buf = await r.arrayBuffer();
+            if (RainAudio._sniff(buf) === "ogg") { this._fmt = "opus"; return buf; }
+          }
+        } catch (e) {  }
       }
     }
 
@@ -83,6 +85,7 @@ class RainAudio {
         "多半是这个文件没被部署（Cloudflare Pages 单文件上限 25 MiB），" +
         "而站点缺少顶层 404.html，于是回落成了首页。");
     }
+    if (this._fmt !== "opus") this._fmt = "orig";
     return buf;
   }
 
@@ -110,7 +113,9 @@ class RainAudio {
         const st = this.stems.get(id);
         if (st) st.buffer = dec;
         return dec;
-      });
+      })
+      // 失败的 promise 不能留在 _pending 里，否则这个素材整场会话都无法重试
+      .catch(e => { this._pending.delete(id); throw e; });
     this._pending.set(id, p);
     return p;
   }
@@ -154,13 +159,10 @@ class RainAudio {
 
     this.ready = this.readyFirst.catch(() => {}).then(() => {
 
-      for (const a of this.manifest.assets) {
-        if (a.kind === "thunder") this._load(a.id).catch(() => {});
-      }
+      // 只预热当前这份谱子真正用到的素材。旧版无条件解码全部 18 条，
+      // 解码后的 float32 PCM 常驻约 286 MB，移动端有被系统回收的风险。
+      this._warm();
       return Promise.all(RAIN_IDS.map(id => this._load(id).catch(e => { this._err = e.message; })));
-    });
-    this.ready.then(() => {
-      for (const id of WIND_IDS) this._load(id).catch(e => { this._err = e.message; });
     });
 
     return this;
@@ -172,7 +174,29 @@ class RainAudio {
       Math.floor(this.cursor), this.score.frames.length - 1)];
     if (!fr) return Promise.resolve();
     const need = LOOP_IDS.filter(id => (fr.stems[id] || 0) > 0.004);
-    return Promise.all((need.length ? need : [RAIN_IDS[0]]).map(id => this._load(id)));
+    const loops = (need.length ? need : [RAIN_IDS[0]]).map(id => this._load(id));
+
+    // 雷声按需取。取不到不该拖垮起播，所以单独 catch 掉。
+    const th = [...new Set((fr.thunder || []).map(s => s.asset).filter(Boolean))]
+      .map(id => this._load(id).catch(() => {}));
+    return Promise.all(loops.concat(th));
+  }
+
+  // 当前谱子从头到尾会用到的素材集合
+  _needs() {
+    const out = new Set();
+    if (!this.score) return out;
+    for (const fr of this.score.frames) {
+      for (const id of LOOP_IDS) if ((fr.stems[id] || 0) > 0.004) out.add(id);
+      for (const s of (fr.thunder || [])) if (s.asset) out.add(s.asset);
+    }
+    return out;
+  }
+
+  _warm() {
+    for (const id of this._needs()) {
+      if (!this.buffers.has(id)) this._load(id).catch(() => {});
+    }
   }
 
   async _setupEQ() {
@@ -232,6 +256,7 @@ class RainAudio {
     const ev = this.cityDoc.events.find(e => e.event_id === id) || this.cityDoc.events[0];
     this.score = await this._score(ev);
     this.cursor = 0; this._scheduled = -1;
+    this._warm();
     if (was) await this.play();
     return this.score;
   }
@@ -265,6 +290,10 @@ class RainAudio {
     await this.readyFor();
 
     await this.ctx.resume();
+
+    // 连着两次 play() 会叠出第二条 _tick 循环，_applyFrame 双触发。
+    // stop() 里两个都清了，play() 原来只清了 interval。
+    cancelAnimationFrame(this._rafId);
     this.playing = true;
     this._t0 = this.ctx.currentTime - this.cursor * this.secPerFrame;
     this._scheduled = -1;
@@ -281,6 +310,12 @@ class RainAudio {
     this._flashes.length = 0;
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
+
+    // 雷声是在进入每一帧时就把整小时排完的，源节点原来没有被记录，
+    // 于是按下「静音」之后，之前排下去的雷还会继续响一个小时。
+    for (const src of this._thunder) { try { src.stop(); } catch (e) {} }
+    this._thunder.length = 0;
+
     for (const st of this.stems.values()) {
       st.gain.gain.cancelScheduledValues(now);
       st.gain.gain.setTargetAtTime(0, now, 0.05);
@@ -351,7 +386,14 @@ class RainAudio {
       tail.connect(this.master);
     }
     src.start(when);
+    src.onended = () => {
+      const at = this._thunder.indexOf(src);
+      if (at >= 0) this._thunder.splice(at, 1);
+    };
+    this._thunder.push(src);
     this._flashes.push({ when, gain: s.gain, pan: s.pan || 0 });
+    // takeStrikes() 没被调用时（bridge 未接上）这里会一直堆积，封个顶
+    while (this._flashes.length > 256) this._flashes.shift();
   }
 
   _setWindLfo(fr, when) {
